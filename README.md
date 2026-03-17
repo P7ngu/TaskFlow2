@@ -79,10 +79,10 @@ Applicazione Android di esempio scritta in Kotlin con Jetpack Compose, pensata c
 
 L'app contiene due feature:
 
-- `feature_todo`: la feature principale, con lista TODO, aggiunta di elementi e toggle completato
-- `feature_home`: una feature dimostrativa che mostra come integrare `local + remote + repository + use case + ViewModel` in una vertical slice completa, usando Hilt e Retrofit in modo guidato
+- [`feature_todo`](app/src/main/java/com/example/taskflow2/feature_todo/): la feature principale, con lista TODO, aggiunta di elementi e toggle completato
+- [`feature_home`](app/src/main/java/com/example/taskflow2/feature_home/): una feature dimostrativa che mostra come integrare `local + remote + repository + use case + ViewModel` in una vertical slice completa, usando Hilt e Retrofit in modo guidato
 
-In piu' c'e' un esempio separato di `DAO + Room` in `feature_todo_room_example`, tenuto fuori dalla schermata principale per non mischiare troppi concetti nella stessa feature.
+In piu' c'e' un esempio separato di `DAO + Room` in [`feature_todo_room_example`](app/src/main/java/com/example/taskflow2/feature_todo_room_example/), tenuto fuori dalla schermata principale per non mischiare troppi concetti nella stessa feature.
 
 ## Obiettivo del progetto
 
@@ -2215,10 +2215,10 @@ Per rendere piu' chiara la repo, il progetto distingue meglio tra:
 
 Sta soprattutto in:
 
-- `feature_todo/`
-- `feature_home/`
-- `core/`
-- `ui/theme/`
+- [`feature_todo/`](app/src/main/java/com/example/taskflow2/feature_todo/)
+- [`feature_home/`](app/src/main/java/com/example/taskflow2/feature_home/)
+- [`core/`](app/src/main/java/com/example/taskflow2/core/)
+- [`ui/theme/`](app/src/main/java/com/example/taskflow2/ui/theme/)
 
 Qui trovi il flusso reale dell'app: schermate, use case, repository, data source, DI condivisa e tema.
 
@@ -2226,22 +2226,22 @@ Qui trovi il flusso reale dell'app: schermate, use case, repository, data source
 
 Sta soprattutto in:
 
-- `samples/coroutines/`
-- `samples/hilt/`
-- `feature_todo_room_example/`
+- [`samples/coroutines/`](app/src/main/java/com/example/taskflow2/samples/coroutines/)
+- [`samples/hilt/`](app/src/main/java/com/example/taskflow2/samples/hilt/)
+- [`feature_todo_room_example/`](app/src/main/java/com/example/taskflow2/feature_todo_room_example/)
 
 Qui trovi esempi aggiunti per spiegare concetti specifici senza appesantire troppo il percorso principale dell'app.
 
 In pratica:
 
-- `samples/hilt/` raccoglie helper pensati per mostrare scope e qualifier Hilt
-- `samples/coroutines/` raccoglie esempi isolati di error handling coroutine
-- `feature_todo_room_example/` mostra DAO + Room come vertical slice separata
+- [`samples/hilt/`](app/src/main/java/com/example/taskflow2/samples/hilt/) raccoglie helper pensati per mostrare scope e qualifier Hilt
+- [`samples/coroutines/`](app/src/main/java/com/example/taskflow2/samples/coroutines/) raccoglie esempi isolati di error handling coroutine
+- [`feature_todo_room_example/`](app/src/main/java/com/example/taskflow2/feature_todo_room_example/) mostra DAO + Room come vertical slice separata
 
 Regola pratica per orientarti:
 
-- se vuoi capire "come funziona l'app", guarda prima `feature_todo` e `feature_home`
-- se vuoi studiare un concetto isolato, guarda `samples/` e i test dedicati
+- se vuoi capire "come funziona l'app", guarda prima [`feature_todo`](app/src/main/java/com/example/taskflow2/feature_todo/) e [`feature_home`](app/src/main/java/com/example/taskflow2/feature_home/)
+- se vuoi studiare un concetto isolato, guarda [`samples/`](app/src/main/java/com/example/taskflow2/samples/) e i test dedicati
 
 ## Entry point dell'app
 
@@ -2346,7 +2346,7 @@ Quando l'utente fa toggle su un item:
 
 ## Feature 2: Home
 
-`feature_home` e' una feature dimostrativa, ma e' integrata realmente nell'app. Serve a mostrare un caso in cui il repository coordina:
+[`feature_home`](app/src/main/java/com/example/taskflow2/feature_home/) e' una feature dimostrativa, ma e' integrata realmente nell'app. Serve a mostrare un caso in cui il repository coordina:
 
 - `local`
 - `remote`

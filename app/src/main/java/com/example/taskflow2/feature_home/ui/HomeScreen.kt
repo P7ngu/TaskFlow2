@@ -16,7 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.taskflow2.feature_home.presentation.HomeUiEvent
 import com.example.taskflow2.feature_home.presentation.HomeUiState
-import com.example.taskflow2.ui.theme.TaskFlow20Theme
+import com.example.taskflow2.ui.theme.TaskFlow2Theme
 
 /**
  * CRC Card - HomeScreen
@@ -101,7 +101,7 @@ fun HomeScreen(
 @Preview(showBackground = true)
 @Composable
 private fun HomeScreenPreview() {
-    TaskFlow20Theme {
+    TaskFlow2Theme {
         HomeScreen(
             uiState = HomeUiState(
                 welcomeMessage = "Bentornato dalla cache",

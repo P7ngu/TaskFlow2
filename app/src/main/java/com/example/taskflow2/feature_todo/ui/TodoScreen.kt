@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import com.example.taskflow2.feature_todo.domain.model.Todo
 import com.example.taskflow2.feature_todo.presentation.TodoUiEvent
 import com.example.taskflow2.feature_todo.presentation.TodoUiState
-import com.example.taskflow2.ui.theme.TaskFlow20Theme
+import com.example.taskflow2.ui.theme.TaskFlow2Theme
 
 /**
  * CRC Card - TodoScreen
@@ -185,7 +185,7 @@ private fun TodoItem(
 @Preview(showBackground = true)
 @Composable
 private fun TodoScreenPreview() {
-    TaskFlow20Theme {
+    TaskFlow2Theme {
         TodoScreen(
             uiState = TodoUiState(
                 todos = listOf(

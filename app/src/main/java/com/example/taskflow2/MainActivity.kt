@@ -13,7 +13,7 @@ import com.example.taskflow2.feature_home.ui.HomeScreen
 import com.example.taskflow2.feature_todo.di.TodoFeatureModule
 import com.example.taskflow2.feature_todo.presentation.TodoViewModel
 import com.example.taskflow2.feature_todo.ui.TodoScreen
-import com.example.taskflow2.ui.theme.TaskFlow20Theme
+import com.example.taskflow2.ui.theme.TaskFlow2Theme
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            TaskFlow20Theme {
+            TaskFlow2Theme {
                 // Home usa Hilt per mostrare una DI moderna e automatica.
                 // Todo resta manuale per mantenere nel progetto anche il confronto didattico.
                 val homeViewModel: HomeViewModel = hiltViewModel()

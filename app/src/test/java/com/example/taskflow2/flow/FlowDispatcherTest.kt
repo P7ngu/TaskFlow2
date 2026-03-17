@@ -1,6 +1,7 @@
 package com.example.taskflow2.flow
 
 import java.util.concurrent.Executors
+import kotlinx.coroutines.ExecutorCoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.flow
@@ -17,12 +18,8 @@ class FlowDispatcherTest {
 
     @Test
     fun `flowOn moves upstream work to a different dispatcher but not the collector`() = runTest {
-        val upstreamDispatcher = Executors.newSingleThreadExecutor { runnable ->
-            Thread(runnable, "UpstreamFlowDispatcher")
-        }.asCoroutineDispatcher()
-        val collectorDispatcher = Executors.newSingleThreadExecutor { runnable ->
-            Thread(runnable, "CollectorDispatcher")
-        }.asCoroutineDispatcher()
+        val upstreamDispatcher = namedDispatcher("UpstreamFlowDispatcher")
+        val collectorDispatcher = namedDispatcher("CollectorDispatcher")
 
         try {
             val trace = mutableListOf<String>()
@@ -45,13 +42,28 @@ class FlowDispatcherTest {
                     }
             }
 
-            assertTrue(trace.any { entry -> entry.startsWith("flow:UpstreamFlowDispatcher") })
-            assertTrue(trace.any { entry -> entry.startsWith("map:UpstreamFlowDispatcher") })
-            assertTrue(trace.any { entry -> entry.startsWith("onEach:CollectorDispatcher") })
-            assertTrue(trace.any { entry -> entry.startsWith("collect:CollectorDispatcher") })
+            assertTrue(trace.containsThread("flow", "UpstreamFlowDispatcher"))
+            assertTrue(trace.containsThread("map", "UpstreamFlowDispatcher"))
+            assertTrue(trace.containsThread("onEach", "CollectorDispatcher"))
+            assertTrue(trace.containsThread("collect", "CollectorDispatcher"))
         } finally {
             upstreamDispatcher.close()
             collectorDispatcher.close()
         }
+    }
+}
+
+private fun namedDispatcher(name: String): ExecutorCoroutineDispatcher {
+    return Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, name)
+    }.asCoroutineDispatcher()
+}
+
+private fun List<String>.containsThread(
+    stage: String,
+    threadName: String
+): Boolean {
+    return any { entry ->
+        entry.startsWith("$stage:$threadName")
     }
 }

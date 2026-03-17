@@ -8,13 +8,13 @@ import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.taskflow2.core.app.AppIdentityProvider
-import com.example.taskflow2.core.activity.ActivitySessionTracker
 import com.example.taskflow2.feature_home.presentation.HomeViewModel
 import com.example.taskflow2.feature_home.ui.HomeScreen
 import com.example.taskflow2.feature_todo.di.TodoFeatureModule
 import com.example.taskflow2.feature_todo.presentation.TodoViewModel
 import com.example.taskflow2.feature_todo.ui.TodoScreen
+import com.example.taskflow2.samples.hilt.ActivitySessionTracker
+import com.example.taskflow2.samples.hilt.AppIdentityProvider
 import com.example.taskflow2.ui.theme.TaskFlow2Theme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject

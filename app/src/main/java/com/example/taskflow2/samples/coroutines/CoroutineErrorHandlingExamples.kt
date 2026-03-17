@@ -1,4 +1,4 @@
-package com.example.taskflow2.core.coroutines
+package com.example.taskflow2.samples.coroutines
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred

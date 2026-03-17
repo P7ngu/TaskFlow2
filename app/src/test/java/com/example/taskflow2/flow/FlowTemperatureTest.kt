@@ -31,6 +31,7 @@ class FlowTemperatureTest {
 
     @Test
     fun `shared flow is hot and misses old values without replay`() = runTest {
+        val collectorDispatcher = UnconfinedTestDispatcher(testScheduler)
         val sharedFlow = MutableSharedFlow<String>()
         val collected = mutableListOf<String>()
 
@@ -38,7 +39,7 @@ class FlowTemperatureTest {
         // Con replay = 0 il valore non verra' ricevuto da chi si iscrive dopo.
         sharedFlow.emit("prima")
 
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+        val job = launch(collectorDispatcher) {
             sharedFlow.take(2).collect { value ->
                 collected += value
             }
@@ -54,12 +55,13 @@ class FlowTemperatureTest {
 
     @Test
     fun `state flow is hot and immediately exposes the latest state`() = runTest {
+        val collectorDispatcher = UnconfinedTestDispatcher(testScheduler)
         val stateFlow = MutableStateFlow("idle")
         val collected = mutableListOf<String>()
 
         stateFlow.value = "loading"
 
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
+        val job = launch(collectorDispatcher) {
             stateFlow.take(2).collect { value ->
                 collected += value
             }

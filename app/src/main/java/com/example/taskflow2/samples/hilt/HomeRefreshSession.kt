@@ -1,4 +1,4 @@
-package com.example.taskflow2.feature_home.presentation
+package com.example.taskflow2.samples.hilt
 
 import dagger.hilt.android.scopes.ViewModelScoped
 import javax.inject.Inject

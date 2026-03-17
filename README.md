@@ -17,6 +17,7 @@
 - [Architettura](#architettura)
 - [Principi Architetturali Applicati](#principi-architetturali-applicati)
 - [Struttura Del Progetto](#struttura-del-progetto)
+- [Samples e Codice App](#samples-e-codice-app)
 - [Entry Point Dellapp](#entry-point-dellapp)
 - [Feature 1 TODO](#feature-1-todo)
 - [Feature 2 Home](#feature-2-home)
@@ -26,6 +27,7 @@
 - [Cosa Non Fa Il Progetto](#cosa-non-fa-il-progetto)
 - [Come Eseguire Il Progetto](#come-eseguire-il-progetto)
 - [Come Estenderlo](#come-estenderlo)
+- [Testing Guide](#testing-guide)
 - [Guida Rapida Ai File Piu Importanti](#guida-rapida-ai-file-piu-importanti)
 - [Messaggio Finale](#messaggio-finale)
 
@@ -782,7 +784,7 @@ Nota importante:
 
 Nel progetto:
 
-- [CoroutineErrorHandlingExamples.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/coroutines/CoroutineErrorHandlingExamples.kt) contiene un esempio dedicato
+- [CoroutineErrorHandlingExamples.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/samples/coroutines/CoroutineErrorHandlingExamples.kt) contiene un esempio dedicato
 - [CoroutineErrorHandlingExamplesTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineErrorHandlingExamplesTest.kt) lo verifica
 
 #### `supervisorScope`
@@ -817,7 +819,7 @@ Quando usarlo:
 
 Nel progetto:
 
-- [CoroutineErrorHandlingExamples.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/coroutines/CoroutineErrorHandlingExamples.kt) contiene un esempio di `supervisorScope`
+- [CoroutineErrorHandlingExamples.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/samples/coroutines/CoroutineErrorHandlingExamples.kt) contiene un esempio di `supervisorScope`
 - [CoroutineErrorHandlingExamplesTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineErrorHandlingExamplesTest.kt) mostra che un risultato resta disponibile anche se l'altro fallisce
 
 #### `coroutineScope` vs `supervisorScope`
@@ -1928,7 +1930,7 @@ Quando NON usarlo:
 
 Nel progetto:
 
-- [ActivitySessionTracker.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/activity/ActivitySessionTracker.kt) usa `@ActivityContext` e per questo non deve diventare `@Singleton`
+- [ActivitySessionTracker.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/samples/hilt/ActivitySessionTracker.kt) usa `@ActivityContext` e per questo non deve diventare `@Singleton`
 
 #### `@ApplicationContext`
 
@@ -1948,7 +1950,7 @@ Quando NON usarlo:
 
 Nel progetto:
 
-- [AppIdentityProvider.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/app/AppIdentityProvider.kt) usa `@ApplicationContext`, quindi puo' stare tranquillamente in `@Singleton` senza leak di UI
+- [AppIdentityProvider.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/samples/hilt/AppIdentityProvider.kt) usa `@ApplicationContext`, quindi puo' stare tranquillamente in `@Singleton` senza leak di UI
 
 ### Custom qualifiers usati qui
 
@@ -1970,7 +1972,7 @@ Nel progetto:
 
 - e' dichiarato in [AppQualifiers.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/di/AppQualifiers.kt)
 - viene fornito da [AppModule.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/di/AppModule.kt)
-- viene consumato da [AppIdentityProvider.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/app/AppIdentityProvider.kt)
+- viene consumato da [AppIdentityProvider.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/samples/hilt/AppIdentityProvider.kt)
 
 #### `@TeachingBaseUrl` e `@TeachingHttpClient`
 
@@ -2164,6 +2166,9 @@ app/src/main/java/com/example/taskflow2/
   core/
     di/
     network/
+  samples/
+    coroutines/
+    hilt/
   feature_todo/
     data/
       local/
@@ -2198,6 +2203,45 @@ app/src/main/java/com/example/taskflow2/
       usecase/
   ui/theme/
 ```
+
+## Samples e Codice App
+
+Per rendere piu' chiara la repo, il progetto distingue meglio tra:
+
+- codice applicativo vero
+- codice esplicitamente didattico
+
+### Codice app
+
+Sta soprattutto in:
+
+- `feature_todo/`
+- `feature_home/`
+- `core/`
+- `ui/theme/`
+
+Qui trovi il flusso reale dell'app: schermate, use case, repository, data source, DI condivisa e tema.
+
+### Codice dimostrativo
+
+Sta soprattutto in:
+
+- `samples/coroutines/`
+- `samples/hilt/`
+- `feature_todo_room_example/`
+
+Qui trovi esempi aggiunti per spiegare concetti specifici senza appesantire troppo il percorso principale dell'app.
+
+In pratica:
+
+- `samples/hilt/` raccoglie helper pensati per mostrare scope e qualifier Hilt
+- `samples/coroutines/` raccoglie esempi isolati di error handling coroutine
+- `feature_todo_room_example/` mostra DAO + Room come vertical slice separata
+
+Regola pratica per orientarti:
+
+- se vuoi capire "come funziona l'app", guarda prima `feature_todo` e `feature_home`
+- se vuoi studiare un concetto isolato, guarda `samples/` e i test dedicati
 
 ## Entry point dell'app
 
@@ -2526,6 +2570,7 @@ Questo progetto fa alcune scelte esplicitamente pedagogiche:
 
 - usa un `InMemoryTodoDataSource` nella feature TODO principale per mantenere chiaro il focus architetturale
 - affianca un esempio separato `feature_todo_room_example` per mostrare DAO + Room senza appesantire la schermata TODO
+- raccoglie gli helper puramente dimostrativi sotto `samples/`, cosi' il codice dell'app resta piu' leggibile
 - usa una feature `todo` con dependency injection manuale per far vedere chiaramente il wiring "a mano"
 - usa una feature `home` con Hilt per mostrare la stessa architettura con una DI moderna
 - usa Retrofit davvero, ma con un `Interceptor` mockato per mostrare il flusso `remote -> local -> domain -> UI` senza richiedere un backend reale
@@ -2577,6 +2622,43 @@ Possibili evoluzioni consigliate:
 - introdurre navigazione Compose tra piu' schermate
 - estrarre mapper dedicati se i modelli tecnici crescono
 
+## Testing Guide
+
+Se vuoi studiare il progetto partendo dai test, questa e' la mappa piu' rapida.
+
+### Architettura MVVM + DI
+
+- [AddTodoUseCaseTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_todo/domain/usecase/AddTodoUseCaseTest.kt): regola di dominio testata con fake repository, senza UI
+- [TodoViewModelTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_todo/presentation/TodoViewModelTest.kt): stato UI ed eventi della feature TODO
+- [HomeViewModelTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_home/presentation/HomeViewModelTest.kt): `HiltViewModel` testabile via constructor injection
+
+### Coroutine base e tempo virtuale
+
+- [CoroutineTimeControlTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineTimeControlTest.kt): `runTest`, `advanceTimeBy(...)` e `advanceUntilIdle()`
+- [CoroutineJobControlTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineJobControlTest.kt): `Job`, cancellazione e stati finali
+- [CoroutineErrorHandlingExamplesTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineErrorHandlingExamplesTest.kt): `try/catch`, `CoroutineExceptionHandler` e `supervisorScope`
+
+### Flow
+
+- [FlowBuildersTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowBuildersTest.kt): `flowOf`, `asFlow` e `collect`
+- [FlowOperatorsTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowOperatorsTest.kt): `map`, `filter`, `transform`, `take`, `catch`, `onEach` e `onCompletion`
+- [FlowTemperatureTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowTemperatureTest.kt): `cold Flow`, `SharedFlow` e `MutableStateFlow`
+- [FlowDispatcherTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowDispatcherTest.kt): `flowOn` e separazione tra upstream e collector
+
+### Data source e Room
+
+- [InMemoryTodoDataSourceTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_todo/data/local/InMemoryTodoDataSourceTest.kt): fetch one-shot con `delay`
+- [FetchTodoListsUseCaseTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_todo/domain/usecase/FetchTodoListsUseCaseTest.kt): percorso `repository -> use case` per fetch one-shot
+
+Ordine consigliato se parti da zero:
+
+1. `TodoViewModelTest`
+2. `AddTodoUseCaseTest`
+3. `FlowBuildersTest`
+4. `FlowOperatorsTest`
+5. `CoroutineTimeControlTest`
+6. `HomeViewModelTest`
+
 ## Guida rapida ai file piu' importanti
 
 ### Core app
@@ -2584,6 +2666,7 @@ Possibili evoluzioni consigliate:
 - `MainActivity.kt`: entry point Android e wiring delle feature nella UI
 - `TaskFlowApplication.kt`: bootstrap di Hilt
 - `NetworkModule.kt`: costruzione di OkHttp, Retrofit e `HomeApiService`
+- `samples/`: helper esplicitamente didattici separati dal flusso applicativo principale
 
 ### Feature TODO
 
@@ -2621,6 +2704,13 @@ Possibili evoluzioni consigliate:
 - `RoomTodoExampleRepositoryImpl.kt`: adapter tra DAO e domain
 - `ObserveAllRoomTodosUseCase.kt`: use case minimale che espone il `Flow`
 - `RoomTodoExampleModule.kt`: wiring Hilt del database e del repository
+
+### Samples
+
+- `samples/hilt/ActivitySessionTracker.kt`: esempio di `@ActivityScoped` e `@ActivityContext`
+- `samples/hilt/AppIdentityProvider.kt`: esempio di `@ApplicationContext` e qualifier custom
+- `samples/hilt/HomeRefreshSession.kt`: esempio di `@ViewModelScoped`
+- `samples/coroutines/CoroutineErrorHandlingExamples.kt`: helper didattici su `try/catch`, handler e `supervisorScope`
 
 ## Messaggio finale
 

@@ -1,4 +1,4 @@
-package com.example.taskflow2.core.activity
+package com.example.taskflow2.samples.hilt
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ActivityContext

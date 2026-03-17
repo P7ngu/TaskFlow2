@@ -1,4 +1,4 @@
-package com.example.taskflow2.core.app
+package com.example.taskflow2.samples.hilt
 
 import android.content.Context
 import com.example.taskflow2.core.di.AppPackageName

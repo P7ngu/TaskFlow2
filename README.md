@@ -1512,6 +1512,76 @@ Utile quando:
 - vuoi loggare il motivo della chiusura
 - vuoi fare cleanup leggero alla fine
 
+#### `flowOn`
+
+`flowOn(...)` serve a cambiare il dispatcher dell'upstream del `Flow`.
+
+Questo e' il punto chiave:
+
+- `flowOn` non sposta tutto il `Flow` in blocco
+- sposta gli operatori che stanno prima di lui
+- il collector e gli operatori downstream restano nel contesto del collector
+
+Esempio:
+
+```kotlin
+flow {
+    emit(loadFromDisk())
+}
+    .map { data -> parse(data) }
+    .flowOn(Dispatchers.IO)
+    .onEach { value ->
+        println("collector side: $value")
+    }
+    .collect { value ->
+        render(value)
+    }
+```
+
+Come leggerlo:
+
+- `flow { ... }` e `map { ... }` stanno upstream
+- `flowOn(Dispatchers.IO)` li sposta su `IO`
+- `onEach` e `collect` stanno downstream
+- quindi continuano nel contesto del collector, per esempio `Main`
+
+#### Perche' conta con i dispatcher
+
+Nel README abbiamo gia' visto:
+
+- `Dispatchers.Main` per lavoro vicino alla UI
+- `Dispatchers.IO` per I/O bloccante
+- `Dispatchers.Default` per lavoro CPU-bound
+
+`flowOn` e' il modo idiomatico per dire:
+
+- "questa parte upstream del flow non deve girare sul thread del collector"
+
+Quindi:
+
+- se l'upstream fa I/O, spesso userai `flowOn(Dispatchers.IO)`
+- se l'upstream fa calcolo pesante, spesso userai `flowOn(Dispatchers.Default)`
+
+#### Regola pratica importante
+
+Dentro un `flow { ... }` non e' una buona idea cambiare dispatcher a caso con `withContext(...)` attorno a `emit(...)`.
+
+Le docs ufficiali di Kotlin Flow spiegano che, se vuoi cambiare il contesto del flow, la strada corretta e' `flowOn(...)`, non emettere da un dispatcher diverso dentro il builder.
+
+#### Cosa NON fa `flowOn`
+
+- non cambia automaticamente il dispatcher del `collect`
+- non rende `SharedFlow` "piu' background"
+- non sostituisce la scelta architetturale del dispatcher giusto
+
+Nota utile:
+
+- la documentazione ufficiale specifica anche che applicare `flowOn` a uno `SharedFlow` non ha effetto, perche' `SharedFlow` non ha un execution context proprio
+
+#### Esempio didattico nel progetto
+
+- [FlowDispatcherTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowDispatcherTest.kt) mostra che `flowOn` sposta l'upstream su un dispatcher dedicato, mentre il collector resta nel proprio contesto
+
 #### `collect`
 
 `collect` e' il terminal operator piu' comune.

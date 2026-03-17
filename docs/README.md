@@ -4,6 +4,8 @@ Questa cartella funziona come una piccola wiki versionata insieme al codice.
 
 ## Indice
 
+- [Guida Completa](all-in-one.md)
+  Tutta la documentazione principale raccolta in un solo file
 - [Getting Started](getting-started.md)
   Come aprire, buildare e leggere il progetto la prima volta
 - [Architettura](architecture.md)

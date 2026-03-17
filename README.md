@@ -11,6 +11,8 @@ Progetto Android didattico in Kotlin pensato per studiare, con esempi concreti:
 - Coroutine e Flow
 - testing di use case, ViewModel e stream asincroni
 
+Se preferisci tutto in un file: [guida completa](docs/all-in-one.md)
+
 ## Quick Start
 
 ### Android Studio
@@ -64,6 +66,7 @@ Aree di supporto:
 La documentazione lunga e' stata organizzata in stile wiki dentro `docs/`.
 
 - [Indice documentazione](docs/README.md)
+- [Guida Completa](docs/all-in-one.md)
 - [Getting Started](docs/getting-started.md)
 - [Architettura](docs/architecture.md)
 - [Coroutine e Flow](docs/coroutines-and-flow.md)

@@ -1237,6 +1237,204 @@ Quando e' utile:
 - quando hai gia' una lista o una sequenza
 - quando vuoi trattarla con operatori e raccolta tipici dei `Flow`
 
+#### Operatori `Flow` e pigrizia della pipeline
+
+Una delle idee piu' importanti di `Flow` e' che molti operatori sono lazy.
+
+Questo significa:
+
+- puoi costruire una pipeline di trasformazioni
+- ma il lavoro reale spesso non parte finche' non usi un terminal operator come `collect`
+
+Idea mentale:
+
+- `map`, `filter`, `transform`, `take`, `onEach`, `catch`, `onCompletion` descrivono il flusso
+- `collect` lo avvia davvero
+
+#### `map`
+
+`map` trasforma ogni elemento in un altro elemento, uno a uno.
+
+Esempio:
+
+```kotlin
+flowOf(1, 2, 3)
+    .map { value -> value * 10 }
+```
+
+Utile quando:
+
+- vuoi cambiare il formato di ogni valore
+- vuoi convertire entity -> domain model
+- vuoi fare trasformazioni semplici 1 -> 1
+
+#### `filter`
+
+`filter` lascia passare solo i valori che rispettano una condizione.
+
+Esempio:
+
+```kotlin
+flowOf(1, 2, 3, 4)
+    .filter { value -> value % 2 == 0 }
+```
+
+Utile quando:
+
+- vuoi scartare elementi non validi
+- vuoi far proseguire solo certi stati o eventi
+
+#### `transform`
+
+`transform` e' piu' flessibile di `map`.
+
+Con `map` emetti normalmente un solo valore per ogni input. Con `transform` puoi:
+
+- emettere zero valori
+- emettere un valore
+- emettere piu' valori
+
+Esempio:
+
+```kotlin
+flowOf(2, 4).transform { value ->
+    emit("item=$value")
+    emit("double=${value * 2}")
+}
+```
+
+Quando usarlo:
+
+- quando `map` e `filter` separati diventano scomodi
+- quando un input deve produrre piu' output
+
+#### `take`
+
+`take(n)` prende solo i primi `n` valori e poi interrompe la raccolta.
+
+Esempio:
+
+```kotlin
+flowOf(10, 20, 30, 40).take(2)
+```
+
+Perche' e' utile:
+
+- limita il numero di emissioni
+- ferma prima la pipeline
+- nei `Flow` freddi puo' anche interrompere il lavoro upstream prima del previsto
+
+#### `onEach`
+
+`onEach` esegue un effetto collaterale per ogni elemento, senza cambiare il valore.
+
+Esempio:
+
+```kotlin
+flowOf(1, 2, 3)
+    .onEach { value -> println("arrivato: $value") }
+```
+
+Utile per:
+
+- logging
+- debug
+- telemetria
+- side effect leggeri prima del `collect`
+
+#### `catch`
+
+`catch` intercetta eccezioni che arrivano dall'upstream del `Flow`.
+
+Esempio:
+
+```kotlin
+flow {
+    emit(1)
+    throw IllegalStateException("boom")
+}.catch { throwable ->
+    emit(-1)
+}
+```
+
+Nota importante:
+
+- `catch` gestisce errori upstream
+- non e' pensato per "inghiottire tutto" indiscriminatamente
+- nelle coroutine bisogna continuare a trattare `CancellationException` con attenzione
+
+#### `onCompletion`
+
+`onCompletion` viene chiamato quando il `Flow` termina, sia normalmente sia per errore o cancellazione.
+
+Esempio:
+
+```kotlin
+flowOf(1, 2, 3)
+    .onCompletion { cause ->
+        println(cause ?: "completed")
+    }
+```
+
+Utile quando:
+
+- vuoi sapere se il flusso e' finito
+- vuoi loggare il motivo della chiusura
+- vuoi fare cleanup leggero alla fine
+
+#### `collect`
+
+`collect` e' il terminal operator piu' comune.
+
+E' il punto in cui:
+
+- il `Flow` parte davvero
+- i valori vengono consumati
+- la pipeline lazy smette di essere solo descrittiva
+
+Senza `collect`:
+
+- molti `Flow` non eseguono nulla
+- `map`, `filter` e gli altri operatori restano solo una definizione del lavoro
+
+#### Esempio didattico completo
+
+```kotlin
+val result = mutableListOf<String>()
+
+flowOf(1, 2, 3, 4)
+    .filter { value -> value % 2 == 0 }
+    .map { value -> value * 10 }
+    .transform { value ->
+        emit("item=$value")
+        emit("double=${value * 2}")
+    }
+    .take(3)
+    .onEach { value ->
+        println("onEach: $value")
+    }
+    .onCompletion { cause ->
+        println(cause ?: "completed")
+    }
+    .collect { value ->
+        result += value
+    }
+```
+
+Cosa succede:
+
+- `filter` lascia passare solo `2` e `4`
+- `map` li trasforma in `20` e `40`
+- `transform` espande ogni valore in piu' emissioni
+- `take(3)` si ferma ai primi tre output
+- `onEach` osserva ogni elemento che passa
+- `onCompletion` segnala la fine
+- `collect` avvia davvero tutto
+
+Nel progetto:
+
+- [FlowOperatorsTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowOperatorsTest.kt) mostra pipeline lazy, `transform`, `take`, `map`, `filter`, `collect`, `catch`, `onEach` e `onCompletion`
+
 #### Esempi pratici nel progetto
 
 - [FlowBuildersTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowBuildersTest.kt) mostra `flowOf`, `asFlow` e `collect` in modo minimale e leggibile

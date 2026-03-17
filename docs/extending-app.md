@@ -260,11 +260,21 @@ Esempio minimale:
 ```kotlin
 @Composable
 fun ProfiloScreen(onBack: () -> Unit) {
-    Column {
-        Button(onClick = onBack) {
-            Text("Indietro")
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Profilo") },
+                navigationIcon = {
+                    TextButton(onClick = onBack) {
+                        Text("Back")
+                    }
+                }
+            )
         }
-        Text("Profilo custom")
+    ) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding)) {
+            Text("Profilo custom")
+        }
     }
 }
 ```
@@ -277,6 +287,15 @@ Questo approccio va benissimo per:
 - prototipi iniziali
 
 Non serve introdurre subito ViewModel, repository o use case se la pagina non ne ha bisogno.
+
+Per una schermata di dettaglio, una best practice semplice e' aggiungere un
+back button visibile in alto a sinistra, oltre al back di sistema.
+
+Perche' e' utile:
+
+- rende il flusso piu' chiaro a colpo d'occhio
+- aiuta chi studia a distinguere tra UI di dettaglio e schermata principale
+- ti permette di collegare in modo esplicito `onBack` a `navController.navigateUp()`
 
 ## Quando Ti Serve una Feature Completa
 

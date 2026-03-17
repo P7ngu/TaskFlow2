@@ -163,7 +163,11 @@ class MainActivity : ComponentActivity() {
                         //
                         // Se aggiungi una nuova schermata con un bottone "Indietro",
                         // passa `onBack = navController::navigateUp` alla sua UI.
-                        ExampleScreen()
+                        ExampleScreen(
+                            onBack = {
+                                navController.navigateUp()
+                            }
+                        )
                     }
                 }
             }

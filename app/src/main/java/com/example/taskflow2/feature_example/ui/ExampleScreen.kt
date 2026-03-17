@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,15 +26,38 @@ import com.example.taskflow2.ui.theme.TaskFlow2Theme
  * completo "lista in home -> apertura pagina -> ritorno con back".
  *
  * Best practice mostrata qui:
- * una schermata statica non deve introdurre stato, ViewModel o callback se
- * non ne ha davvero bisogno. Tenere il placeholder semplice aiuta a capire
- * meglio cosa appartiene alla UI e cosa invece appartiene alla navigazione.
+ * una schermata di dettaglio puo' restare molto semplice ma beneficia di
+ * un'azione di ritorno visibile in alto a sinistra.
+ *
+ * Questo aiuta chi studia a vedere due cose:
+ * - la UI espone un `onBack`
+ * - il livello superiore decide che `onBack` corrisponde a `navigateUp()`
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExampleScreen(modifier: Modifier = Modifier) {
+fun ExampleScreen(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets.safeDrawing
+        contentWindowInsets = WindowInsets.safeDrawing,
+        topBar = {
+            // Best practice per una schermata di dettaglio:
+            // mostrare un'azione di ritorno esplicita nella top bar oltre al
+            // back di sistema. Usiamo un `TextButton` per mantenere
+            // l'esempio semplice e senza dipendenze aggiuntive.
+            TopAppBar(
+                title = {
+                    Text("Esempio")
+                },
+                navigationIcon = {
+                    TextButton(onClick = onBack) {
+                        Text("Back")
+                    }
+                }
+            )
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -44,8 +70,8 @@ fun ExampleScreen(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Non aggiungiamo bottoni di navigazione alla UI: il back di sistema
-            // torna automaticamente alla schermata precedente nello stack.
+            // Il contenuto resta minimale: la navigazione visibile e' raccolta
+            // nella top bar per rendere piu' chiaro il pattern di dettaglio.
             Text(
                 text = "helloworld",
                 style = MaterialTheme.typography.headlineMedium
@@ -58,6 +84,6 @@ fun ExampleScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun ExampleScreenPreview() {
     TaskFlow2Theme {
-        ExampleScreen()
+        ExampleScreen(onBack = {})
     }
 }

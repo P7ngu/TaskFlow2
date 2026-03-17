@@ -21,6 +21,12 @@ import javax.inject.Singleton
  * Collabora con:
  * - `HomeRepositoryImpl` come implementazione concreta.
  * - `HomeViewModel` e i use case che chiedono `HomeRepository`.
+ *
+ * Regola pratica:
+ * - usa `@Binds` quando devi collegare un'interfaccia a una implementazione
+ *   che Hilt sa gia' costruire tramite costruttore `@Inject`
+ * - usa `@Provides` quando devi creare un oggetto manualmente, per esempio
+ *   librerie esterne, builder o classi create via factory method
  */
 @Module
 @InstallIn(SingletonComponent::class)

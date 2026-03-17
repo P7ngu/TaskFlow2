@@ -16,6 +16,12 @@ import retrofit2.converter.gson.GsonConverterFactory
  *
  * L'esempio usa Retrofit davvero, ma il traffico HTTP viene intercettato
  * da un mock locale così il progetto resta didattico e subito eseguibile.
+ *
+ * Regola pratica:
+ * - qui usiamo `@Provides` perche' OkHttpClient, Retrofit e HomeApiService
+ *   vanno costruiti esplicitamente tramite builder o factory
+ * - se avessimo solo un binding interfaccia -> implementazione con costruttore
+ *   `@Inject`, allora sarebbe piu' adatto `@Binds`
  */
 @Module
 @InstallIn(SingletonComponent::class)

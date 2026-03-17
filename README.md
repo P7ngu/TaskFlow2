@@ -7,6 +7,7 @@
 - [Stack Tecnologico](#stack-tecnologico)
 - [Requisiti Tecnici](#requisiti-tecnici)
 - [Dipendenze Principali](#dipendenze-principali)
+- [DAO Pattern e Room Example](#dao-pattern-e-room-example)
 - [Coroutine Guide](#coroutine-guide)
 - [Hilt Scope Guide](#hilt-scope-guide)
 - [Hilt Qualifier Guide](#hilt-qualifier-guide)
@@ -79,6 +80,8 @@ L'app contiene due feature:
 - `feature_todo`: la feature principale, con lista TODO, aggiunta di elementi e toggle completato
 - `feature_home`: una feature dimostrativa che mostra come integrare `local + remote + repository + use case + ViewModel` in una vertical slice completa, usando Hilt e Retrofit in modo guidato
 
+In piu' c'e' un esempio separato di `DAO + Room` in `feature_todo_room_example`, tenuto fuori dalla schermata principale per non mischiare troppi concetti nella stessa feature.
+
 ## Obiettivo del progetto
 
 Questo repository non nasce come semplice demo UI, ma come esempio architetturale. Lo scopo e' mostrare chiaramente:
@@ -99,6 +102,7 @@ Questo repository non nasce come semplice demo UI, ma come esempio architettural
 - AndroidX Lifecycle
 - Hilt
 - Retrofit + OkHttp
+- Room
 - StateFlow / Coroutines Flow
 - MVVM + Clean Architecture
 
@@ -125,6 +129,85 @@ Il modulo `app` usa queste librerie principali:
 - `com.google.dagger:hilt-android`
 - `com.squareup.retrofit2:retrofit`
 - `com.squareup.okhttp3:okhttp`
+- `androidx.room:room-runtime`
+- `androidx.room:room-ktx`
+
+## DAO Pattern e Room Example
+
+Nel progetto la feature TODO principale resta volutamente in-memory, ma ora c'e' anche un esempio separato di persistenza reale con Room in:
+
+- `app/src/main/java/com/example/taskflow2/feature_todo_room_example/`
+
+Questo esempio serve a mostrare il pattern DAO senza mischiarlo con la feature TODO gia' esistente.
+
+### Cos'e' il pattern DAO
+
+DAO significa `Data Access Object`.
+
+L'idea e' semplice:
+
+- il DAO contiene le operazioni di accesso ai dati
+- le query SQL restano concentrate in un punto dedicato
+- il resto dell'app non parla direttamente con il database
+
+Nel nostro esempio:
+
+- `RoomTodoDatabase` espone il database Room
+- `RoomTodoDao` contiene le query sulla tabella `room_todo_items`
+- `RoomTodoExampleRepositoryImpl` usa il DAO e traduce `Entity` <-> modello di dominio
+
+### Perche' serve
+
+Il DAO pattern migliora:
+
+- separazione delle responsabilita'
+- leggibilita' delle query
+- testabilita' del data layer
+- riduzione dell'accoppiamento con il database concreto
+
+Regola pratica:
+
+- il `Database` sa quali tabelle e DAO esistono
+- il `Dao` sa come leggere e scrivere una tabella
+- il `Repository` sa cosa esporre al domain
+
+### `observeAll()` con Room
+
+In [RoomTodoDao.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo_room_example/data/local/RoomTodoDao.kt) c'e' questo metodo:
+
+```kotlin
+@Query("SELECT * FROM room_todo_items ORDER BY id ASC")
+fun observeAll(): Flow<List<RoomTodoEntity>>
+```
+
+Perche' e' interessante:
+
+- ritorna un `Flow`
+- non richiede polling manuale
+- Room osserva la tabella e riemette i dati quando cambia
+
+Quindi il comportamento mentale e':
+
+- inserisci o aggiorni un record
+- Room invalida la query
+- il `Flow` del DAO emette il nuovo risultato
+- repository, use case e UI possono reagire in cascata
+
+### Come e' organizzato l'esempio
+
+- [RoomTodoEntity.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo_room_example/data/local/RoomTodoEntity.kt): formato di persistenza Room
+- [RoomTodoDao.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo_room_example/data/local/RoomTodoDao.kt): DAO con `observeAll()`
+- [RoomTodoDatabase.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo_room_example/data/local/RoomTodoDatabase.kt): database Room
+- [RoomTodoExampleRepository.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo_room_example/domain/repository/RoomTodoExampleRepository.kt): contratto del domain
+- [RoomTodoExampleRepositoryImpl.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo_room_example/data/repository/RoomTodoExampleRepositoryImpl.kt): adapter tra DAO e domain
+- [ObserveAllRoomTodosUseCase.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo_room_example/domain/usecase/ObserveAllRoomTodosUseCase.kt): use case minimale che espone il `Flow`
+- [RoomTodoExampleModule.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo_room_example/di/RoomTodoExampleModule.kt): wiring Hilt del database, DAO e repository
+
+### Nota didattica
+
+Le [Android Developers docs su Room](https://developer.android.com/training/data-storage/room) oggi raccomandano KSP nei progetti Kotlin.
+
+In questa repo l'esempio Room usa il setup `kapt` gia' presente per Hilt, cosi' resta piu' compatto e leggibile per chi studia. Concettualmente il pattern DAO non cambia: cambierebbe solo il tool di code generation.
 
 ## Coroutine Guide
 
@@ -1599,6 +1682,15 @@ app/src/main/java/com/example/taskflow2/
       usecase/
     presentation/
     ui/
+  feature_todo_room_example/
+    data/
+      local/
+      repository/
+    di/
+    domain/
+      model/
+      repository/
+      usecase/
   ui/theme/
 ```
 
@@ -1927,7 +2019,8 @@ Vantaggi:
 
 Questo progetto fa alcune scelte esplicitamente pedagogiche:
 
-- usa un `InMemoryTodoDataSource` invece di Room per mantenere chiaro il focus architetturale
+- usa un `InMemoryTodoDataSource` nella feature TODO principale per mantenere chiaro il focus architetturale
+- affianca un esempio separato `feature_todo_room_example` per mostrare DAO + Room senza appesantire la schermata TODO
 - usa una feature `todo` con dependency injection manuale per far vedere chiaramente il wiring "a mano"
 - usa una feature `home` con Hilt per mostrare la stessa architettura con una DI moderna
 - usa Retrofit davvero, ma con un `Interceptor` mockato per mostrare il flusso `remote -> local -> domain -> UI` senza richiedere un backend reale
@@ -1937,12 +2030,11 @@ Questo progetto fa alcune scelte esplicitamente pedagogiche:
 
 Per scelta, questo esempio non include:
 
-- Room
 - navigazione multi-screen
-- persistenza reale su disco
+- l'uso di Room dentro la feature TODO principale
 - una vera API remota pubblica o un backend dedicato
 - gestione errori di rete avanzata
-- test unitari dedicati ai use case
+- test di integrazione dedicati a Room o migration test
 
 Questo rende il progetto piu' piccolo e leggibile per studio, ma la struttura e' pronta per essere estesa.
 
@@ -1973,9 +2065,9 @@ Eseguire i test:
 
 Possibili evoluzioni consigliate:
 
-- sostituire `InMemoryTodoDataSource` con Room
+- collegare la schermata TODO principale all'esempio Room gia' presente
 - sostituire il mock HTTP di `TeachingMockInterceptor` con una API reale
-- aggiungere test unitari per `AddTodoUseCase` e `ToggleTodoUseCase`
+- aggiungere test di integrazione per `RoomTodoDao` con database in-memory
 - aggiungere error state nel contratto UI della Home
 - introdurre navigazione Compose tra piu' schermate
 - estrarre mapper dedicati se i modelli tecnici crescono
@@ -2015,6 +2107,15 @@ Possibili evoluzioni consigliate:
 - `HomeRemoteDataSource.kt`: adapter remoto basato su Retrofit
 - `TeachingMockInterceptor.kt`: risposta HTTP mockata per l'esempio
 - `HomeFeatureModule.kt`: binding Hilt del repository
+
+### Room Example
+
+- `RoomTodoDao.kt`: esempio di DAO con `observeAll()`
+- `RoomTodoDatabase.kt`: database Room che espone il DAO
+- `RoomTodoEntity.kt`: entity di persistenza
+- `RoomTodoExampleRepositoryImpl.kt`: adapter tra DAO e domain
+- `ObserveAllRoomTodosUseCase.kt`: use case minimale che espone il `Flow`
+- `RoomTodoExampleModule.kt`: wiring Hilt del database e del repository
 
 ## Messaggio finale
 

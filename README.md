@@ -1183,6 +1183,129 @@ Idea mentale:
 
 - "non ti do un solo valore, ti do una sequenza di aggiornamenti"
 
+#### Cold Flow vs Hot Flow
+
+Una distinzione molto importante e' questa:
+
+- `Flow` normale e' spesso cold
+- `SharedFlow` e `StateFlow` sono hot
+
+#### Cold Flow
+
+Un cold flow:
+
+- non parte da solo
+- in genere esegue il suo lavoro solo quando qualcuno fa `collect`
+- puo' rieseguire l'upstream da capo per ogni nuovo collector
+
+Idea mentale:
+
+- il cold flow e' come una ricetta
+- ogni volta che qualcuno la esegue, si ricomincia il lavoro
+
+Esempio:
+
+```kotlin
+val coldFlow = flow {
+    println("parto")
+    emit(1)
+}
+
+coldFlow.collect { println(it) } // stampa "parto"
+coldFlow.collect { println(it) } // stampa di nuovo "parto"
+```
+
+Questo e' utile quando:
+
+- vuoi descrivere lavoro che parte on-demand
+- vuoi che ogni collector abbia il proprio ciclo di esecuzione
+
+#### Hot Flow
+
+Un hot flow:
+
+- esiste indipendentemente dal singolo collector
+- puo' emettere anche se in quel momento nessuno sta ascoltando
+- non riparte necessariamente da zero per ogni collector
+
+Idea mentale:
+
+- l'hot flow e' come una radio accesa
+- tu puoi sintonizzarti ora, ma la trasmissione non nasce perche' tu ascolti
+
+#### `SharedFlow`
+
+`SharedFlow` e' un hot flow pensato per condividere emissioni con piu' collector.
+
+Di solito si crea tramite `MutableSharedFlow`:
+
+```kotlin
+val events = MutableSharedFlow<String>()
+val publicEvents: SharedFlow<String> = events
+```
+
+Quando usarlo:
+
+- eventi one-shot
+- messaggi broadcast
+- stream condivisi tra piu' observer
+
+Nota importante:
+
+- se `replay = 0`, un collector che arriva tardi non riceve i valori gia' emessi
+- quindi e' ottimo per eventi, meno per "stato corrente"
+
+#### `StateFlow`
+
+`StateFlow` e' un hot flow specializzato per rappresentare stato corrente.
+
+Caratteristiche:
+
+- ha sempre un valore attuale
+- quando un collector si iscrive, riceve subito l'ultimo stato
+- e' perfetto per UI state e osservazione continua
+
+Nel progetto:
+
+- i `ViewModel` espongono `StateFlow<UiState>`
+- Compose osserva quello stato e ridisegna la UI quando cambia
+
+#### `MutableStateFlow`
+
+`MutableStateFlow` e' la versione mutabile usata di solito all'interno del producer.
+
+Pattern tipico:
+
+```kotlin
+private val _uiState = MutableStateFlow(HomeUiState())
+val uiState: StateFlow<HomeUiState> = _uiState
+```
+
+Significato:
+
+- dentro il `ViewModel` aggiorni `_uiState`
+- fuori esponi solo `StateFlow`, cioe' la vista read-only
+
+Questo e' importante per:
+
+- incapsulamento
+- evitare modifiche arbitrarie dall'esterno
+- mantenere prevedibile il flusso dei dati
+
+#### Regola pratica veloce
+
+- `Flow` cold: lavoro on-demand, ogni collector puo' far ripartire l'upstream
+- `SharedFlow`: hot flow per eventi condivisi
+- `StateFlow`: hot flow per stato corrente
+- `MutableStateFlow`: lato mutabile interno, spesso dentro `ViewModel` o data source
+
+#### Esempio didattico nel progetto
+
+- [FlowTemperatureTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowTemperatureTest.kt) mostra:
+  - un cold flow che riparte per ogni collector
+  - un `MutableSharedFlow` che perde i valori precedenti se non usa replay
+  - un `MutableStateFlow` che espone subito l'ultimo stato disponibile
+
 #### `collect`
 
 `collect { ... }` serve a consumare i valori emessi da un `Flow`.

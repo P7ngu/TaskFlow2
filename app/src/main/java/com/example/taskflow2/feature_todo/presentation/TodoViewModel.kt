@@ -57,6 +57,9 @@ class TodoViewModel(
 
     private fun observeTodos() {
         viewModelScope.launch {
+            // `collect` resta in ascolto del `Flow`.
+            // Non sta facendo pull continuo dei dati: il repository emette solo
+            // quando la lista cambia, e il ViewModel reagisce aggiornando la UI.
             getTodosUseCase().collect { todos ->
                 _uiState.update { currentState ->
                     currentState.copy(

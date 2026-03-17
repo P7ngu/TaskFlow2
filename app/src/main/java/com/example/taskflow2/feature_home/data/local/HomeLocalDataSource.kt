@@ -37,6 +37,9 @@ class HomeLocalDataSource @Inject constructor() {
     )
 
     fun observeCachedHome(): Flow<HomeLocalModel?> = cachedState.asStateFlow()
+    // Anche qui niente polling:
+    // chi osserva questo `Flow` riceve un aggiornamento solo quando la cache
+    // cambia davvero, per esempio dopo `save(...)`.
 
     suspend fun save(home: HomeLocalModel) {
         cachedState.value = home

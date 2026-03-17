@@ -36,6 +36,10 @@ class InMemoryTodoDataSource {
     private var nextId = 3L
 
     fun observeTodos(): Flow<List<Todo>> = todos.asStateFlow()
+    // Qui non facciamo polling.
+    // La UI non viene a "chiedere ogni tanto" se la lista e' cambiata:
+    // e' `StateFlow` che emette automaticamente un nuovo valore quando `todos`
+    // viene aggiornato tramite `insertTodo()` o `updateTodo()`.
 
     /**
      * Esempio didattico di fetch one-shot con coroutine.

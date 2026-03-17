@@ -52,6 +52,9 @@ class HomeViewModel @Inject constructor(
 
     private fun observeHomeInfo() {
         viewModelScope.launch {
+            // Questo `collect` non fa polling.
+            // La cache locale emette un nuovo valore solo quando cambia, e la UI
+            // si riallinea da sola tramite `uiState`.
             observeHomeInfoUseCase().collect { homeInfo ->
                 _uiState.update { currentState ->
                     currentState.copy(

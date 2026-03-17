@@ -1100,6 +1100,64 @@ Idea mentale:
 
 - "non ti do un solo valore, ti do una sequenza di aggiornamenti"
 
+#### `collect`
+
+`collect { ... }` serve a consumare i valori emessi da un `Flow`.
+
+Esempio:
+
+```kotlin
+flowOf(1, 2, 3).collect { value ->
+    println(value)
+}
+```
+
+Spiegazione:
+
+- il `Flow` emette valori nel tempo
+- `collect` e' il punto in cui li ricevi davvero
+- finche' non raccogli il `Flow`, spesso il lavoro non parte nemmeno
+
+Nel progetto:
+
+- i `ViewModel` usano `collect` per osservare i dati di repository e use case
+
+#### `flowOf`
+
+`flowOf(...)` crea un `Flow` a partire da valori gia' noti.
+
+Esempio:
+
+```kotlin
+val numbers = flowOf(1, 2, 3)
+```
+
+Quando e' utile:
+
+- esempi didattici
+- test
+- piccoli flussi statici
+- casi in cui vuoi trasformare pochi valori gia' disponibili in un `Flow`
+
+#### `asFlow`
+
+`asFlow()` converte una collection o una sequenza in `Flow`.
+
+Esempio:
+
+```kotlin
+val flow = listOf("a", "b", "c").asFlow()
+```
+
+Quando e' utile:
+
+- quando hai gia' una lista o una sequenza
+- quando vuoi trattarla con operatori e raccolta tipici dei `Flow`
+
+#### Esempi pratici nel progetto
+
+- [FlowBuildersTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowBuildersTest.kt) mostra `flowOf`, `asFlow` e `collect` in modo minimale e leggibile
+
 #### `StateFlow`
 
 `StateFlow` e' un tipo di `Flow` che rappresenta uno stato corrente sempre disponibile.

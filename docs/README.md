@@ -18,6 +18,8 @@ Questa cartella funziona come una piccola wiki versionata insieme al codice.
   Esempio Room separato con DAO, `observeAll()` e repository
 - [Testing Guide](testing.md)
   Mappa dei test e ordine consigliato di studio
+- [Estendere l'app](extending-app.md)
+  Guida pratica per aggiungere una nuova pagina custom o una nuova feature
 
 ## Percorsi Consigliati
 

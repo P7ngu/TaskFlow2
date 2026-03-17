@@ -25,6 +25,7 @@ app/src/main/java/com/example/taskflow2/
     hilt/
   feature_todo/
   feature_home/
+  feature_example/
   feature_todo_room_example/
   ui/theme/
 ```
@@ -130,6 +131,25 @@ File chiave:
 - [`HomeViewModel.kt`](../app/src/main/java/com/example/taskflow2/feature_home/presentation/HomeViewModel.kt)
 - [`HomeRepositoryImpl.kt`](../app/src/main/java/com/example/taskflow2/feature_home/data/repository/HomeRepositoryImpl.kt)
 - [`NetworkModule.kt`](../app/src/main/java/com/example/taskflow2/core/di/NetworkModule.kt)
+
+### Menu Home ed Esempio
+
+Cartelle:
+
+- [`feature_home/`](../app/src/main/java/com/example/taskflow2/feature_home/)
+- [`feature_example/`](../app/src/main/java/com/example/taskflow2/feature_example/)
+
+Mostrano:
+
+- una lista di destinazioni mostrata direttamente nella home
+- navigazione gestita con Navigation Compose
+- una pagina custom minimale con contenuto statico
+
+File chiave:
+
+- [`HomeScreen.kt`](../app/src/main/java/com/example/taskflow2/feature_home/ui/HomeScreen.kt)
+- [`ExampleScreen.kt`](../app/src/main/java/com/example/taskflow2/feature_example/ui/ExampleScreen.kt)
+- [`MainActivity.kt`](../app/src/main/java/com/example/taskflow2/MainActivity.kt)
 
 ## Samples e Codice App
 

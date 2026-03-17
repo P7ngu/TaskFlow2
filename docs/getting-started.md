@@ -23,6 +23,22 @@ Valori tecnici correnti:
 4. Avvia un emulatore o collega un device
 5. Esegui il modulo `app`
 
+### GitHub Desktop
+
+Se non vuoi usare il terminale per clonare la repo:
+
+1. Apri GitHub Desktop
+2. Seleziona `File > Clone repository`
+3. Vai nella tab `URL`
+4. Incolla l'URL della repository
+5. Scegli la cartella locale di destinazione
+6. Premi `Clone`
+7. Apri poi il progetto clonato in Android Studio
+
+Suggerimento pratico:
+
+- una volta clonato, verifica di aprire proprio la cartella root `TaskFlow2` e non una sua sottocartella
+
 ### Terminale
 
 Build debug:

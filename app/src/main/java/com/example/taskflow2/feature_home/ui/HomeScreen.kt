@@ -18,15 +18,46 @@ import com.example.taskflow2.feature_home.presentation.HomeUiEvent
 import com.example.taskflow2.feature_home.presentation.HomeUiState
 import com.example.taskflow2.ui.theme.TaskFlow2Theme
 
+// Per l'esempio teniamo la configurazione del menu direttamente qui:
+// la home mostra una piccola lista statica e notifica solo che l'utente
+// vuole aprire la pagina di esempio.
+//
+// Best practice per un esempio piccolo:
+// se i dati servono solo a questa schermata e non hanno logica propria,
+// tenerli vicini alla UI puo' essere piu' leggibile che estrarli troppo presto.
+private data class HomeMenuItem(
+    val title: String,
+    val description: String
+)
+
+private val homeMenuItems = listOf(
+    HomeMenuItem(
+        title = "Matteo",
+        description = "Voce di esempio della lista home."
+    ),
+    HomeMenuItem(
+        title = "Esempio",
+        description = "Apre la pagina di esempio con contenuto minimale."
+    )
+    // Per aggiungere una nuova voce visuale nella lista:
+    // - aggiungi qui un altro `HomeMenuItem(...)`
+    // - poi estendi i parametri della schermata con una callback dedicata
+    //   come `onOpenProfile`
+    // - infine collega quella callback in `MainActivity`
+)
+
 /**
  * CRC Card - HomeScreen
  *
  * Responsabilita':
  * - Disegnare la UI della feature Home a partire da `HomeUiState`.
  * - Tradurre il click di refresh in un `HomeUiEvent`.
+ * - Mostrare una lista di pagine custom cliccabili.
  *
  * Serve a:
  * - Dimostrare una schermata Compose indipendente dal layer data.
+ * - Mostrare come aggiungere un menu semplice senza introdurre subito
+ *   una soluzione di navigazione piu' pesante.
  *
  * Collabora con:
  * - `HomeViewModel` indirettamente tramite stato ed eventi.
@@ -36,6 +67,14 @@ import com.example.taskflow2.ui.theme.TaskFlow2Theme
 fun HomeScreen(
     uiState: HomeUiState,
     onEvent: (HomeUiEvent) -> Unit,
+    // La schermata non sa *come* si naviga, sa solo che deve chiedere
+    // l'apertura dell'esempio. Questo mantiene la UI riusabile e piu' facile
+    // da testare o da leggere in isolamento.
+    //
+    // Se aggiungi una nuova schermata, la best practice e' aggiungere qui
+    // un'altra callback semantica, ad esempio `onOpenProfile: () -> Unit`,
+    // invece di passare un `NavController` direttamente alla UI.
+    onOpenExample: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -102,6 +141,44 @@ fun HomeScreen(
                     )
                 }
             }
+
+            Text(
+                text = "Pagine custom",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            // Renderizziamo una piccola lista statica di voci.
+            // Per mantenere l'esempio semplice, ogni elemento apre la stessa
+            // schermata `Esempio`.
+            //
+            // Best practice:
+            // la UI emette intenti semplici (`onOpenExample`) invece di
+            // chiamare direttamente `navController.navigate(...)`.
+            //
+            // Se vuoi far aprire schermate diverse:
+            // - puoi aggiungere piu' callback (`onOpenProfile`, `onOpenSettings`, ...)
+            // - oppure trasformare questo esempio in una lista con una callback
+            //   piu' generica e un mapping nel livello superiore
+            homeMenuItems.forEach { item ->
+                Button(
+                    onClick = onOpenExample,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Titolo principale della voce, utile a identificare
+                        // rapidamente la destinazione dall'elenco.
+                        Text(item.title)
+                        Text(
+                            // Descrizione secondaria: qui possiamo spiegare
+                            // cosa fara' la schermata una volta aperta.
+                            text = item.description,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -118,7 +195,8 @@ private fun HomeScreenPreview() {
                 isLoading = false,
                 isRefreshing = false
             ),
-            onEvent = {}
+            onEvent = {},
+            onOpenExample = {}
         )
     }
 }

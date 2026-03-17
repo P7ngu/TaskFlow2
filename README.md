@@ -23,6 +23,17 @@ Se preferisci tutto in un file: [guida completa](docs/all-in-one.md)
 4. Avvia un emulatore o collega un device
 5. Premi `Run` sul modulo `app`
 
+### GitHub Desktop
+
+Se preferisci clonare il progetto con GitHub Desktop:
+
+1. Apri GitHub Desktop
+2. Vai su `File > Clone repository`
+3. Incolla l'URL della repo nella tab `URL`
+4. Scegli la cartella locale in cui salvarla
+5. Premi `Clone`
+6. Da GitHub Desktop usa `Repository > Open in Android Studio` oppure apri manualmente la cartella clonata in Android Studio
+
 ### Da terminale
 
 Build debug:
@@ -54,6 +65,7 @@ Feature reali:
 
 - [`feature_todo`](app/src/main/java/com/example/taskflow2/feature_todo/): TODO list principale, DI manuale e flusso UDF
 - [`feature_home`](app/src/main/java/com/example/taskflow2/feature_home/): feature demo con Hilt, Retrofit, cache locale e repository
+- [`feature_example`](app/src/main/java/com/example/taskflow2/feature_example/): esempio minimale di pagina finale con contenuto statico
 
 Aree di supporto:
 
@@ -73,6 +85,7 @@ La documentazione lunga e' stata organizzata in stile wiki dentro `docs/`.
 - [Hilt e DI](docs/hilt.md)
 - [Room e DAO Pattern](docs/room.md)
 - [Testing Guide](docs/testing.md)
+- [Estendere l'app](docs/extending-app.md)
 
 ## Percorso Consigliato
 

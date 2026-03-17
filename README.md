@@ -1190,6 +1190,11 @@ Una distinzione molto importante e' questa:
 - `Flow` normale e' spesso cold
 - `SharedFlow` e `StateFlow` sono hot
 
+Analogia semplice:
+
+- cold flow = un barattolo chiuso che apri solo quando ti serve
+- hot flow = un barattolo gia' aperto sul tavolo, che puo' cambiare anche mentre non lo stai guardando
+
 #### Cold Flow
 
 Un cold flow:
@@ -1202,6 +1207,7 @@ Idea mentale:
 
 - il cold flow e' come una ricetta
 - ogni volta che qualcuno la esegue, si ricomincia il lavoro
+- oppure come un barattolo chiuso: finche' non lo apri, dentro non succede nulla per te
 
 Esempio:
 
@@ -1232,6 +1238,7 @@ Idea mentale:
 
 - l'hot flow e' come una radio accesa
 - tu puoi sintonizzarti ora, ma la trasmissione non nasce perche' tu ascolti
+- oppure come un barattolo gia' aperto: quando arrivi, trovi gia' uno stato attuale
 
 #### `SharedFlow`
 

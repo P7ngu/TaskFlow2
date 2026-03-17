@@ -393,6 +393,28 @@ Idea pratica:
 
 - se il lavoro potrebbe bloccare un thread per attesa I/O, spesso `IO` e' il dispatcher giusto
 
+#### Differenza con Java per I/O
+
+Se arrivi da Java, il parallelo mentale e' questo:
+
+- in Java spesso gestisci I/O con `Thread`, `ExecutorService`, `Future`, callback o `CompletableFuture`
+- in Kotlin con coroutine normalmente scrivi codice piu' lineare e sposti il lavoro con `withContext(Dispatchers.IO)`
+
+Idea pratica:
+
+- Java classico: "creo o uso un thread / executor per non bloccare il chiamante"
+- Kotlin: "resto nella coroutine e cambio contesto verso `Dispatchers.IO`"
+
+Quindi `Dispatchers.IO` non e' "un nuovo linguaggio per fare rete", ma il modo idiomatico di dire:
+
+- questo pezzo puo' bloccare per file, database o rete
+- non deve girare sul thread UI
+
+Esempio mentale:
+
+- Java: spesso ragioni in termini di thread da gestire
+- Kotlin: ragioni piu' spesso in termini di coroutine + dispatcher
+
 #### `Dispatchers.Default`
 
 Serve per lavoro CPU-bound, cioe' calcolo.
@@ -1182,6 +1204,39 @@ Nel progetto:
 Idea mentale:
 
 - "non ti do un solo valore, ti do una sequenza di aggiornamenti"
+
+#### Differenza con Java per `Flow`
+
+`Flow` non coincide con i `Stream` di Java.
+
+Differenza chiave:
+
+- `Stream` Java e' pensato soprattutto per trasformare collezioni gia' disponibili
+- `Flow` Kotlin rappresenta valori che possono arrivare nel tempo, anche in modo asincrono
+
+Quindi:
+
+- `Stream` = elaborazione di una collection
+- `Flow` = stream asincrono di emissioni nel tempo
+
+Se arrivi da Java, `Flow` somiglia di piu' al mondo:
+
+- callback/listener
+- `Publisher` reattivi
+- RxJava `Observable` o `Flowable`
+
+ma con sintassi integrata nelle coroutine Kotlin.
+
+Idea pratica:
+
+- Java `Stream` e `List.stream()` sono utili per `map/filter/reduce` su dati gia' presenti
+- Kotlin `Flow` serve quando i dati arrivano nel tempo, per esempio database osservabile, eventi, rete o stato UI
+
+Per questo nel progetto usiamo `Flow` per:
+
+- osservare dati che cambiano
+- aggiornare la UI in modo reattivo
+- evitare polling manuale
 
 #### Cold Flow vs Hot Flow
 

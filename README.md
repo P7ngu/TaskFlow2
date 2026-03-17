@@ -689,6 +689,26 @@ Nel progetto:
 
 - [HomeRefreshAuditLogger.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_home/data/local/HomeRefreshAuditLogger.kt) usa `withContext(Dispatchers.IO)` per scrivere su file in modo corretto
 
+Esempio repository + `withContext(IO)`:
+
+```kotlin
+class AuditRepository(
+    private val fileDataSource: AuditFileDataSource
+) {
+    suspend fun saveAuditEntry(entry: String) {
+        withContext(Dispatchers.IO) {
+            fileDataSource.write(entry)
+        }
+    }
+}
+```
+
+Quando ha senso:
+
+- il repository sta facendo una singola operazione one-shot
+- quell'operazione e' I/O bloccante
+- vuoi spostare quel blocco su `IO` e poi tornare al contesto del chiamante
+
 Regola pratica:
 
 - `launch` se vuoi far partire un lavoro
@@ -1636,6 +1656,38 @@ Nota utile:
 #### Esempio didattico nel progetto
 
 - [FlowDispatcherTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/flow/FlowDispatcherTest.kt) mostra che `flowOn` sposta l'upstream su un dispatcher dedicato, mentre il collector resta nel proprio contesto
+
+Esempio repository + `flowOn(IO)`:
+
+```kotlin
+class DocumentRepository(
+    private val diskDataSource: DiskDocumentDataSource
+) {
+    fun observeDocuments(): Flow<List<Document>> {
+        return flow {
+            emit(diskDataSource.loadAll())
+        }
+            .map { documents -> documents.sortedBy { it.title } }
+            .flowOn(Dispatchers.IO)
+    }
+}
+```
+
+Quando ha senso:
+
+- il repository sta costruendo un `Flow`
+- la parte upstream fa I/O bloccante
+- vuoi che quell'upstream non giri sul dispatcher del collector
+
+Regola pratica finale:
+
+- `repository + suspend + withContext(IO)` per una singola operazione che restituisce un risultato o completa una write
+- `repository + Flow + flowOn(IO)` quando il repository costruisce una pipeline `Flow` e vuoi spostarne l'upstream
+
+Nota importante su Room:
+
+- se il repository restituisce gia' un `Flow` proveniente da Room, spesso non serve aggiungere `flowOn(IO)` manualmente
+- ha piu' senso usare `flowOn` quando il repository crea lui il `flow { ... }` o compone lavoro upstream esplicito
 
 #### `collect`
 

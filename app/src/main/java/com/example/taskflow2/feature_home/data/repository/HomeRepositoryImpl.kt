@@ -60,6 +60,9 @@ class HomeRepositoryImpl @Inject constructor(
         // Esempio pratico:
         // la scrittura su file e' I/O bloccante, quindi il logger usa
         // `withContext(Dispatchers.IO)` invece di girare sul main thread.
+        // Regola mentale:
+        // - operazione one-shot `suspend` -> spesso `withContext(IO)`
+        // - pipeline `Flow` costruita dal repository -> spesso `flowOn(IO)`
         homeRefreshAuditLogger.logRefresh(
             entry = "home-refresh:${remoteModel.fetchedAt}"
         )

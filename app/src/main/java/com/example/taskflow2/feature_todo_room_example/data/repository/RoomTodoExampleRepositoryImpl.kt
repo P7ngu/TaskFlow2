@@ -28,6 +28,12 @@ class RoomTodoExampleRepositoryImpl @Inject constructor(
 ) : RoomTodoExampleRepository {
 
     override fun observeAll(): Flow<List<RoomTodoItem>> {
+        // Questo repository restituisce un `Flow` gia' osservabile dal DAO Room.
+        // Qui ci limitiamo a mappare Entity -> Domain.
+        // Nota didattica:
+        // - `flowOn(IO)` ha senso soprattutto se il repository costruisce lui un
+        //   `flow { ... }` con lavoro upstream esplicito
+        // - con un `Flow` Room gia' pronto, non va aggiunto "per riflesso"
         return roomTodoDao.observeAll().map { entities ->
             entities.map { entity ->
                 entity.toDomain()

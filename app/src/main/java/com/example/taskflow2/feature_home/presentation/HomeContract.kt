@@ -17,6 +17,7 @@ data class HomeUiState(
     val welcomeMessage: String = "",
     val serverStatus: String = "",
     val lastSyncLabel: String = "",
+    val errorMessage: String? = null,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false
 )

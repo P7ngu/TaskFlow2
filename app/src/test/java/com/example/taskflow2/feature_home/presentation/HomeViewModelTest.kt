@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -56,9 +57,27 @@ class HomeViewModelTest {
         assertEquals(2, repository.refreshCalls)
         assertEquals("Sync numero 2", viewModel.uiState.value.lastSyncLabel)
     }
+
+    @Test
+    fun `try catch in viewmodel turns exception into UI error state`() = runTest {
+        val repository = FakeHomeRepository(shouldFailRefresh = true)
+        val viewModel = HomeViewModel(
+            observeHomeInfoUseCase = ObserveHomeInfoUseCase(repository),
+            refreshHomeInfoUseCase = RefreshHomeInfoUseCase(repository),
+            refreshSession = HomeRefreshSession()
+        )
+
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.isRefreshing)
+        assertEquals("refresh failed", viewModel.uiState.value.errorMessage)
+        assertTrue(repository.refreshCalls >= 1)
+    }
 }
 
-private class FakeHomeRepository : HomeRepository {
+private class FakeHomeRepository(
+    private val shouldFailRefresh: Boolean = false
+) : HomeRepository {
     private val homeState = MutableStateFlow<HomeInfo?>(null)
     var refreshCalls: Int = 0
         private set
@@ -67,6 +86,9 @@ private class FakeHomeRepository : HomeRepository {
 
     override suspend fun refreshHomeInfo() {
         refreshCalls += 1
+        if (shouldFailRefresh) {
+            error("refresh failed")
+        }
         homeState.value = HomeInfo(
             welcomeMessage = "Dati remoti caricati dal fake repository",
             serverStatus = "Fake backend stabile",

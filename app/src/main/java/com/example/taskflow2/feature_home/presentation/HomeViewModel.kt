@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.taskflow2.feature_home.domain.usecase.ObserveHomeInfoUseCase
 import com.example.taskflow2.feature_home.domain.usecase.RefreshHomeInfoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.concurrent.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,7 +68,10 @@ class HomeViewModel @Inject constructor(
     private fun refresh() {
         viewModelScope.launch {
             _uiState.update { currentState ->
-                currentState.copy(isRefreshing = true)
+                currentState.copy(
+                    isRefreshing = true,
+                    errorMessage = null
+                )
             }
 
             // `HomeRefreshSession` e' `@ViewModelScoped`:
@@ -78,6 +82,16 @@ class HomeViewModel @Inject constructor(
 
             try {
                 refreshHomeInfoUseCase()
+            } catch (cancellationException: CancellationException) {
+                throw cancellationException
+            } catch (exception: Exception) {
+                // `try/catch` e' il posto giusto quando vogliamo gestire
+                // localmente l'errore e trasformarlo in stato UI.
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        errorMessage = exception.message ?: "Errore durante il refresh"
+                    )
+                }
             } finally {
                 _uiState.update { currentState ->
                     currentState.copy(isRefreshing = false)

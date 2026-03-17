@@ -413,6 +413,27 @@ Perche' ha senso:
 - il `ViewModel` puo' avviare lavoro asincrono e poi aggiornare `StateFlow`
 - la coroutine viene legata al lifecycle del `ViewModel`
 
+Esempio:
+
+```kotlin
+viewModelScope.launch {
+    _uiState.update { it.copy(isRefreshing = true) }
+
+    try {
+        refreshHomeInfoUseCase()
+    } finally {
+        _uiState.update { it.copy(isRefreshing = false) }
+    }
+}
+```
+
+Spiegazione:
+
+- `launch` fa partire il lavoro asincrono
+- il `ViewModel` non blocca il thread UI
+- non stiamo restituendo un valore diretto al chiamante
+- aggiorniamo lo stato prima e dopo il lavoro
+
 ### `launch` e "fire and forget"
 
 Molto spesso `launch` viene descritto come pattern "fire and forget".
@@ -443,6 +464,22 @@ Questa e' la versione sana del "fire and forget" in Android:
 - il caller non aspetta un valore
 - ma la coroutine vive dentro una scope controllata
 
+Esempio di fire and forget sano:
+
+```kotlin
+fun onRefreshClicked() {
+    viewModelScope.launch {
+        refreshHomeInfoUseCase()
+    }
+}
+```
+
+Spiegazione:
+
+- il click avvia il lavoro
+- non facciamo `await` di nessun risultato diretto
+- la coroutine e' comunque controllata dal lifecycle del `ViewModel`
+
 ### Quando usare `launch`
 
 Usa `launch` quando:
@@ -470,6 +507,558 @@ In quei casi spesso ha piu' senso:
 - `launch` = "avvia un lavoro"
 - `suspend` = "definisci un'operazione sospendibile"
 - `async` = "avvia un lavoro che produce un risultato"
+
+#### `async` e `await`
+
+`async` avvia una coroutine che produce un risultato.
+
+A differenza di `launch`:
+
+- `launch` restituisce un `Job`
+- `async` restituisce un `Deferred<T>`
+- quel `Deferred<T>` puo' essere letto con `await()`
+
+Usalo quando:
+
+- vuoi un valore asincrono
+- vuoi comporre piu' operazioni concorrenti
+- il risultato finale conta davvero per il chiamante
+
+Esempio:
+
+```kotlin
+val profileDeferred = scope.async { fetchProfile() }
+val todosDeferred = scope.async { fetchTodos() }
+
+val profile = profileDeferred.await()
+val todos = todosDeferred.await()
+```
+
+Spiegazione:
+
+- facciamo partire due lavori che producono un risultato
+- con `await()` aspettiamo il valore finale
+- questo e' diverso da `launch`, che non nasce per restituire un output
+
+Quando non serve:
+
+- se vuoi solo avviare un effetto collaterale
+- se non ti interessa un valore finale
+
+In quei casi `launch` e' spesso piu' onesto e piu' semplice.
+
+#### `withContext`
+
+`withContext(...)` non avvia "un nuovo lavoro indipendente" come `launch`.
+
+Serve invece a:
+
+- cambiare contesto o dispatcher
+- eseguire un blocco
+- restituire il risultato di quel blocco
+- poi tornare al contesto precedente
+
+Esempio:
+
+```kotlin
+suspend fun loadAuditEntry(): String {
+    return withContext(Dispatchers.IO) {
+        file.readText()
+    }
+}
+```
+
+Spiegazione:
+
+- entriamo temporaneamente in `Dispatchers.IO`
+- facciamo lavoro bloccante di I/O
+- restituiamo il risultato
+- poi torniamo al contesto del chiamante
+
+Differenza pratica rispetto a `launch`:
+
+- `launch` = avvia una coroutine separata, senza valore diretto
+- `withContext` = resta dentro il flusso della funzione corrente e restituisce un valore
+
+Nel progetto:
+
+- [HomeRefreshAuditLogger.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_home/data/local/HomeRefreshAuditLogger.kt) usa `withContext(Dispatchers.IO)` per scrivere su file in modo corretto
+
+Regola pratica:
+
+- `launch` se vuoi far partire un lavoro
+- `async` se vuoi far partire un lavoro che produce un risultato
+- `withContext` se vuoi cambiare dispatcher dentro una funzione e continuare il flusso normale
+
+#### `try/catch`
+
+`try/catch` e' la scelta giusta quando vuoi gestire localmente un errore dentro
+una coroutine o dentro una funzione `suspend`.
+
+Esempio:
+
+```kotlin
+viewModelScope.launch {
+    try {
+        refreshHomeInfoUseCase()
+    } catch (e: Exception) {
+        _uiState.update { it.copy(errorMessage = e.message) }
+    }
+}
+```
+
+Spiegazione:
+
+- qui vogliamo trasformare l'errore in stato UI
+- quindi `try/catch` e' piu' adatto di un handler globale
+
+Nota importante:
+
+- non bisogna "mangiare" `CancellationException`
+- se la intercetti, in genere va rilanciata
+
+Nel progetto:
+
+- [HomeViewModel.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_home/presentation/HomeViewModel.kt) usa `try/catch` per convertire errori di refresh in `errorMessage`
+
+#### `CoroutineExceptionHandler`
+
+`CoroutineExceptionHandler` serve per gestire eccezioni non catturate in
+coroutine avviate tipicamente con `launch`.
+
+Ha senso soprattutto per:
+
+- logging
+- telemetry
+- fallback globale
+- debug
+
+Esempio:
+
+```kotlin
+val handler = CoroutineExceptionHandler { _, throwable ->
+    log(throwable)
+}
+
+scope.launch(handler) {
+    error("boom")
+}
+```
+
+Spiegazione:
+
+- qui non stiamo recuperando localmente dall'errore
+- stiamo dicendo: "se nessuno lo gestisce, passa da questo handler"
+
+Nota importante:
+
+- non sostituisce `try/catch` quando vuoi recuperare davvero
+- e non e' il modo giusto per leggere errori di `async` tramite `await`
+
+Nel progetto:
+
+- [CoroutineErrorHandlingExamples.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/coroutines/CoroutineErrorHandlingExamples.kt) contiene un esempio dedicato
+- [CoroutineErrorHandlingExamplesTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineErrorHandlingExamplesTest.kt) lo verifica
+
+#### `supervisorScope`
+
+`supervisorScope` serve quando vuoi che piu' coroutine figlie siano indipendenti:
+
+- se una fallisce, le altre non vengono cancellate automaticamente
+
+Questo e' utile quando vuoi risultati parziali.
+
+Esempio:
+
+```kotlin
+supervisorScope {
+    val first = async { runCatching { loadFirst() } }
+    val second = async { runCatching { loadSecond() } }
+
+    first.await() to second.await()
+}
+```
+
+Spiegazione:
+
+- senza `supervisorScope`, un fallimento di un figlio spesso cancella i fratelli
+- con `supervisorScope`, puoi continuare a raccogliere i risultati indipendenti
+
+Quando usarlo:
+
+- dashboard con widget indipendenti
+- schermate che possono mostrare dati parziali
+- caricamenti paralleli dove un fallimento non deve buttare giu' tutto
+
+Nel progetto:
+
+- [CoroutineErrorHandlingExamples.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/coroutines/CoroutineErrorHandlingExamples.kt) contiene un esempio di `supervisorScope`
+- [CoroutineErrorHandlingExamplesTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineErrorHandlingExamplesTest.kt) mostra che un risultato resta disponibile anche se l'altro fallisce
+
+#### `coroutineScope` vs `supervisorScope`
+
+Questi due costrutti sembrano simili, ma hanno una differenza architetturale importante.
+
+##### `coroutineScope`
+
+Con `coroutineScope`:
+
+- i figli appartengono tutti alla stessa struttura
+- se un figlio fallisce, il fallimento si propaga
+- gli altri figli vengono cancellati
+
+Esempio:
+
+```kotlin
+coroutineScope {
+    val first = async { loadFirst() }
+    val second = async { error("boom") }
+
+    first.await()
+    second.await()
+}
+```
+
+Spiegazione:
+
+- se `second` fallisce
+- il fallimento si propaga all'intera scope
+- `first` non continua indisturbato: viene cancellato
+
+Quando ha senso:
+
+- quando tutti i figli fanno parte della stessa operazione logica
+- quando un fallimento deve far fallire tutto
+- quando non avrebbe senso mostrare risultati parziali
+
+Idea mentale:
+
+- "o va bene tutto, o fallisce tutto"
+
+##### `supervisorScope`
+
+Con `supervisorScope`:
+
+- i figli restano piu' indipendenti
+- se un figlio fallisce, gli altri non vengono cancellati automaticamente
+- puoi ancora raccogliere risultati parziali
+
+Esempio:
+
+```kotlin
+supervisorScope {
+    val first = async { runCatching { loadFirst() } }
+    val second = async { runCatching { loadSecond() } }
+
+    first.await() to second.await()
+}
+```
+
+Spiegazione:
+
+- se `second` fallisce
+- `first` puo' comunque completare
+- il chiamante puo' decidere come usare il risultato disponibile
+
+Quando ha senso:
+
+- dashboard con sezioni indipendenti
+- schermate con caricamenti paralleli separati
+- casi in cui un errore parziale non deve distruggere tutta l'esperienza
+
+Idea mentale:
+
+- "ogni figlio prova a fare il suo lavoro; poi valuto i risultati"
+
+##### Regola pratica
+
+- usa `coroutineScope` quando i figli fanno parte di un'unica operazione indivisibile
+- usa `supervisorScope` quando vuoi isolare i fallimenti e salvare risultati parziali
+
+### Cos'e' un `Job`
+
+Quando usi `launch`, ricevi un `Job`.
+
+Il `Job` rappresenta:
+
+- la coroutine in esecuzione
+- il suo stato
+- la possibilita' di cancellarla o aspettarne la fine
+
+Con un `Job` puoi, per esempio:
+
+- controllare se e' ancora attivo
+- cancellarlo
+- fare `join()` per aspettarne il completamento
+- usare `cancelAndJoin()` per cancellarlo e aspettarne subito la fine
+
+Idea mentale:
+
+- la coroutine e' il lavoro
+- il `Job` e' il "manico" con cui puoi controllare quel lavoro
+
+Esempio:
+
+```kotlin
+val job = scope.launch {
+    delay(1_000)
+}
+
+if (job.isActive) {
+    // il lavoro e' ancora in corso
+}
+```
+
+Spiegazione:
+
+- `launch` restituisce un `Job`
+- il `Job` permette di osservare e controllare la coroutine
+- puoi conservarlo se ti serve cancellare o aspettare il completamento
+
+### Cancellazione delle coroutine
+
+Le coroutine in Kotlin usano cancellazione cooperativa.
+
+Questo significa:
+
+- una coroutine non viene "uccisa brutalmente" in ogni punto possibile
+- il codice deve trovarsi in punti sospendibili o controllare lo stato di cancellazione
+
+La cancellazione funziona bene soprattutto quando la coroutine:
+
+- usa funzioni sospendibili come `delay`
+- raccoglie `Flow`
+- controlla periodicamente il proprio stato
+
+### `cancel()`, `join()` e `cancelAndJoin()`
+
+#### `cancel()`
+
+`cancel()` chiede a un `Job` di fermarsi.
+
+Importante:
+
+- non significa "interrompi tutto all'istante in modo brutale"
+- significa "questa coroutine deve terminare appena collabora con la cancellazione"
+
+Da solo, `cancel()` non aspetta la fine completa della coroutine.
+
+Esempio:
+
+```kotlin
+val job = scope.launch {
+    while (isActive) {
+        delay(100)
+    }
+}
+
+job.cancel()
+```
+
+Spiegazione:
+
+- chiediamo alla coroutine di fermarsi
+- la coroutine uscira' quando collaborera' con la cancellazione
+- qui collabora grazie a `isActive` e `delay`
+
+#### `join()`
+
+`join()` aspetta che un `Job` finisca.
+
+Serve quando vuoi dire:
+
+- "non proseguire finche' questo lavoro non e' terminato"
+
+`join()` non cancella il job: aspetta soltanto il completamento.
+
+Esempio:
+
+```kotlin
+val job = scope.launch {
+    delay(1_000)
+}
+
+job.join()
+```
+
+Spiegazione:
+
+- qui aspettiamo soltanto la fine del lavoro
+- se il job termina normalmente, `join()` riprende
+- se il job era gia' terminato, `join()` rientra subito
+
+#### `cancelAndJoin()`
+
+`cancelAndJoin()` unisce i due passaggi:
+
+- chiede la cancellazione
+- aspetta che il job termini davvero
+
+Nella pratica e' molto utile per test e shutdown ordinato, perche' evita di
+scrivere separatamente:
+
+```kotlin
+job.cancel()
+job.join()
+```
+
+Esempio diretto:
+
+```kotlin
+val job = scope.launch {
+    while (isActive) {
+        delay(100)
+    }
+}
+
+job.cancelAndJoin()
+```
+
+Spiegazione:
+
+- cancelliamo il job
+- aspettiamo che la coroutine abbia davvero finito
+- e' molto comodo in test, cleanup o shutdown ordinato
+
+### `isActive`
+
+`isActive` serve a sapere se la coroutine corrente e' ancora attiva.
+
+Si usa spesso in loop o lavori lunghi, per esempio:
+
+```kotlin
+while (isActive) {
+    // lavoro cooperativo
+}
+```
+
+Esempio piu' completo:
+
+```kotlin
+val job = scope.launch {
+    while (isActive) {
+        doSmallWorkChunk()
+        delay(50)
+    }
+}
+```
+
+Spiegazione:
+
+- il loop continua solo finche' la coroutine e' attiva
+- se qualcuno chiama `cancel()`, `isActive` diventera' `false`
+- il lavoro si ferma senza continuare inutilmente
+
+Perche' e' utile:
+
+- permette di interrompere un lavoro lungo quando la scope viene cancellata
+- evita che la coroutine continui a fare lavoro inutile
+- aiuta a rispettare il lifecycle di `ViewModel`, screen o scope di test
+
+### Quando controllare `isActive`
+
+Controlla `isActive` soprattutto quando:
+
+- hai loop lunghi
+- fai lavoro CPU-bound a pezzi
+- hai una coroutine lunga che non passa spesso da funzioni sospendibili
+
+Se invece il codice usa gia' spesso funzioni sospendibili, molte volte la cooperazione alla cancellazione arriva gia' in modo naturale.
+
+### `isCompleted` e `isCancelled`
+
+Queste proprieta' vivono sul `Job` e aiutano a capire in che stato si trova.
+
+#### `isActive`
+
+Significa:
+
+- il job e' partito e non e' ancora terminato
+
+#### `isCompleted`
+
+Significa:
+
+- il job ha finito il suo ciclo di vita
+- puo' essere finito normalmente oppure terminato dopo cancellazione
+
+Quindi:
+
+- un job cancellato alla fine diventa comunque anche `isCompleted == true`
+
+#### `isCancelled`
+
+Significa:
+
+- il job e' terminato a seguito di cancellazione
+
+Quindi:
+
+- `isCompleted` dice "ha finito?"
+- `isCancelled` dice "ha finito per cancellazione?"
+
+### Lettura pratica degli stati
+
+Caso 1: job ancora in corso
+
+- `isActive = true`
+- `isCompleted = false`
+- `isCancelled = false`
+
+Caso 2: job finito normalmente
+
+- `isActive = false`
+- `isCompleted = true`
+- `isCancelled = false`
+
+Caso 3: job cancellato
+
+- `isActive = false`
+- `isCompleted = true`
+- `isCancelled = true`
+
+Esempio pratico:
+
+```kotlin
+val job = scope.launch {
+    delay(1_000)
+}
+
+job.cancelAndJoin()
+
+println(job.isActive)     // false
+println(job.isCompleted)  // true
+println(job.isCancelled)  // true
+```
+
+Spiegazione:
+
+- il job non sta piu' lavorando
+- il suo ciclo di vita e' concluso
+- la conclusione e' avvenuta per cancellazione, non per completamento normale
+
+### Esempio mentale pratico
+
+- `launch` fa partire il lavoro
+- il `Job` ti permette di controllarlo
+- `cancel()` chiede alla coroutine di fermarsi
+- `join()` aspetta che finisca
+- `cancelAndJoin()` la ferma e aspetta la fine
+- `isActive` permette al codice della coroutine di capire se deve continuare o uscire
+- `isCompleted` e `isCancelled` ti aiutano a leggere lo stato finale del job
+
+### Perche' conta in Android
+
+In Android questo e' fondamentale per evitare:
+
+- lavoro inutile dopo che una schermata e' stata chiusa
+- aggiornamenti di stato fuori lifecycle
+- spreco di CPU e batteria
+
+Per questo scope come `viewModelScope` sono cosi' utili:
+
+- quando il `ViewModel` finisce, i `Job` figli vengono cancellati
+- le coroutine che collaborano correttamente si fermano da sole
 
 ### Nota di sicurezza
 
@@ -556,6 +1145,7 @@ Questo permette di:
 Nel progetto:
 
 - [CoroutineTimeControlTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineTimeControlTest.kt) mostra il controllo del tempo virtuale
+- [CoroutineJobControlTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineJobControlTest.kt) mostra `Job`, `cancel()`, `join()`, `cancelAndJoin()`, `isActive`, `isCompleted` e `isCancelled`
 - [MainDispatcherRule.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/testutil/MainDispatcherRule.kt) sostituisce `Dispatchers.Main` nei test dei `ViewModel`
 - [InMemoryTodoDataSource.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo/data/local/InMemoryTodoDataSource.kt) contiene anche un esempio reale di `suspend fun fetchTodoLists()` con `delay(...)`
 - [InMemoryTodoDataSourceTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_todo/data/local/InMemoryTodoDataSourceTest.kt) mostra come testarlo senza aspettare un secondo reale

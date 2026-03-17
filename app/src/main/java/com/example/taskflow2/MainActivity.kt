@@ -8,6 +8,8 @@ import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.taskflow2.core.app.AppIdentityProvider
+import com.example.taskflow2.core.activity.ActivitySessionTracker
 import com.example.taskflow2.feature_home.presentation.HomeViewModel
 import com.example.taskflow2.feature_home.ui.HomeScreen
 import com.example.taskflow2.feature_todo.di.TodoFeatureModule
@@ -15,6 +17,7 @@ import com.example.taskflow2.feature_todo.presentation.TodoViewModel
 import com.example.taskflow2.feature_todo.ui.TodoScreen
 import com.example.taskflow2.ui.theme.TaskFlow2Theme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * CRC Card - MainActivity
@@ -36,6 +39,12 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject
+    lateinit var appIdentityProvider: AppIdentityProvider
+
+    @Inject
+    lateinit var activitySessionTracker: ActivitySessionTracker
+
     private val todoViewModelFactory by lazy {
         TodoFeatureModule.provideTodoViewModelFactory()
     }
@@ -43,6 +52,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Esempio pratico:
+        // `ActivitySessionTracker` e' `@ActivityScoped` perche' vive quanto
+        // questa Activity e usa `@ActivityContext`.
+        // Renderlo `@Singleton` sarebbe un errore: rischieremmo di trattenere
+        // un riferimento a una Activity distrutta.
+        activitySessionTracker.currentSessionTag()
+
+        // `AppIdentityProvider` invece usa `@ApplicationContext`, quindi puo'
+        // vivere come `@Singleton` senza trattenere riferimenti UI.
+        // Qui mostriamo anche un qualifier custom (`@AppPackageName`) per
+        // distinguere quale `String` vogliamo ricevere dal grafo Hilt.
+        appIdentityProvider.identityLabel()
 
         setContent {
             TaskFlow2Theme {

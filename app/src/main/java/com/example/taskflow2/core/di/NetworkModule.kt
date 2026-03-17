@@ -22,6 +22,11 @@ import retrofit2.converter.gson.GsonConverterFactory
  *   vanno costruiti esplicitamente tramite builder o factory
  * - se avessimo solo un binding interfaccia -> implementazione con costruttore
  *   `@Inject`, allora sarebbe piu' adatto `@Binds`
+ * - questi oggetti sono `@Singleton` perche' sono infrastruttura condivisa;
+ *   non devono conoscere Activity, View o `ActivityContext`, altrimenti si
+ *   rischierebbero memory leak o stato UI trattenuto troppo a lungo
+ * - usiamo anche qualifier custom quando il semplice tipo (`String`,
+ *   `OkHttpClient`) non basta a distinguere il significato della dipendenza
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -29,6 +34,14 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    @TeachingBaseUrl
+    fun provideTeachingBaseUrl(): String {
+        return "https://taskflow.didactic/"
+    }
+
+    @Provides
+    @Singleton
+    @TeachingHttpClient
     fun provideOkHttpClient(
         teachingMockInterceptor: TeachingMockInterceptor
     ): OkHttpClient {
@@ -39,9 +52,12 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideRetrofit(
+        @TeachingHttpClient okHttpClient: OkHttpClient,
+        @TeachingBaseUrl baseUrl: String
+    ): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://taskflow.didactic/")
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

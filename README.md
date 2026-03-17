@@ -1,5 +1,33 @@
 # TaskFlow2
 
+## Indice
+
+- [Quick Start](#quick-start)
+- [Obiettivo Del Progetto](#obiettivo-del-progetto)
+- [Stack Tecnologico](#stack-tecnologico)
+- [Requisiti Tecnici](#requisiti-tecnici)
+- [Dipendenze Principali](#dipendenze-principali)
+- [Coroutine Guide](#coroutine-guide)
+- [Hilt Scope Guide](#hilt-scope-guide)
+- [Hilt Qualifier Guide](#hilt-qualifier-guide)
+- [MVVM + DI Perche Funzionano Bene Insieme](#mvvm--di-perche-funzionano-bene-insieme)
+- [Stato Attuale Del Progetto](#stato-attuale-del-progetto)
+- [Licenza](#licenza)
+- [Architettura](#architettura)
+- [Principi Architetturali Applicati](#principi-architetturali-applicati)
+- [Struttura Del Progetto](#struttura-del-progetto)
+- [Entry Point Dellapp](#entry-point-dellapp)
+- [Feature 1 TODO](#feature-1-todo)
+- [Feature 2 Home](#feature-2-home)
+- [Descrizione Dei Layer](#descrizione-dei-layer)
+- [Flusso Dei Dati](#flusso-dei-dati)
+- [Scelte Didattiche Intenzionali](#scelte-didattiche-intenzionali)
+- [Cosa Non Fa Il Progetto](#cosa-non-fa-il-progetto)
+- [Come Eseguire Il Progetto](#come-eseguire-il-progetto)
+- [Come Estenderlo](#come-estenderlo)
+- [Guida Rapida Ai File Piu Importanti](#guida-rapida-ai-file-piu-importanti)
+- [Messaggio Finale](#messaggio-finale)
+
 ## Quick Start
 
 Se hai appena scaricato o clonato il progetto:
@@ -97,6 +125,684 @@ Il modulo `app` usa queste librerie principali:
 - `com.google.dagger:hilt-android`
 - `com.squareup.retrofit2:retrofit`
 - `com.squareup.okhttp3:okhttp`
+
+## Coroutine Guide
+
+Le coroutine sono il modo principale con cui Kotlin gestisce lavoro asincrono in modo leggibile.
+
+### Cosa sono
+
+Una coroutine e' un'unita' di lavoro leggera che puo' essere sospesa e ripresa senza bloccare il thread.
+
+In pratica servono per:
+
+- fare operazioni asincrone senza callback annidate
+- evitare di bloccare il thread UI
+- esprimere meglio flussi di dati e operazioni che richiedono tempo
+
+### Perche' servono in Android
+
+In Android il thread principale deve restare libero per:
+
+- disegnare la UI
+- ricevere input utente
+- reagire velocemente a tocchi, scroll e navigazione
+
+Se blocchiamo il main thread con lavoro lungo, l'app diventa scattosa o puo' andare in ANR.
+
+Le coroutine aiutano a:
+
+- spostare il lavoro asincrono fuori dal flusso bloccante
+- aggiornare poi lo stato UI in modo ordinato
+- mantenere il codice piu' semplice di callback, listener e thread manuali
+
+### Differenza tra coroutine e thread
+
+Coroutine e thread non sono la stessa cosa.
+
+#### Thread
+
+Un thread e' una risorsa del sistema operativo.
+
+Caratteristiche:
+
+- e' piu' pesante da creare e gestire
+- esegue lavoro realmente in parallelo o concorrente a livello di sistema
+- se ne crei troppi, consumi piu' memoria e coordinazione
+
+Idea mentale:
+
+- il thread e' il "binario fisico" su cui gira il lavoro
+
+#### Coroutine
+
+Una coroutine e' unita' di lavoro gestita a livello di linguaggio/libreria Kotlin.
+
+Caratteristiche:
+
+- e' molto piu' leggera di un thread
+- puo' sospendersi e riprendere senza bloccare il thread
+- molte coroutine possono condividere pochi thread sottostanti
+
+Idea mentale:
+
+- la coroutine e' il "task logico" che viene eseguito sopra uno o piu' thread
+
+#### Differenza pratica
+
+- thread = "dove gira fisicamente il lavoro"
+- coroutine = "come modello e organizzo il lavoro asincrono"
+
+Quindi:
+
+- non creiamo una coroutine per avere automaticamente un nuovo thread
+- una coroutine puo' girare sul thread principale o su thread di background, a seconda del dispatcher e del contesto
+- tante coroutine possono essere multiplexate sugli stessi thread
+
+#### Perche' in Kotlin preferiamo spesso coroutine ai thread manuali
+
+Perche' con le coroutine otteniamo:
+
+- codice piu' leggibile
+- meno gestione manuale di thread, callback e sincronizzazione
+- sospensione non bloccante con `delay`
+- integrazione naturale con `Flow`, `StateFlow`, `viewModelScope` e test come `runTest`
+
+#### Esempio mentale veloce
+
+- creare un thread e' come assumere un nuovo lavoratore fisso
+- creare una coroutine e' come aggiungere un nuovo compito a un sistema di lavoro che riusa i lavoratori gia' disponibili
+
+#### Attenzione importante
+
+Le coroutine non eliminano i problemi di concorrenza per magia.
+
+Se piu' coroutine modificano lo stesso stato condiviso, restano possibili:
+
+- race condition
+- stato incoerente
+- bug difficili da riprodurre
+
+Quello che cambia e' che Kotlin offre strumenti molto piu' comodi per gestire questi casi rispetto a thread manuali e callback annidate.
+
+### Come interagiscono con dispatcher e thread pool
+
+Per capire davvero le coroutine, bisogna distinguere tre livelli:
+
+- coroutine = unita' logica di lavoro
+- dispatcher = regola che decide su quali thread eseguire quella coroutine
+- thread pool = insieme reale di thread che il dispatcher puo' usare sotto al cofano
+
+#### Dispatcher
+
+Un dispatcher dice a Kotlin coroutines dove far partire o riprendere una coroutine.
+
+In pratica decide:
+
+- su quale contesto di esecuzione lavorare
+- se restare sul main thread o andare su thread di background
+- come distribuire il lavoro sui thread disponibili
+
+Idea mentale:
+
+- la coroutine e' il compito
+- il dispatcher e' il coordinatore che decide chi lo esegue
+
+#### Thread pool
+
+Un thread pool e' un gruppo di thread riutilizzati per eseguire lavoro senza creare ogni volta thread nuovi.
+
+Perche' e' utile:
+
+- riusa thread gia' esistenti
+- riduce overhead di creazione/distruzione
+- permette di gestire meglio tanti task concorrenti
+
+Molti dispatcher lavorano proprio sopra thread pool interni o condivisi.
+
+#### Relazione pratica
+
+Quando lanci una coroutine:
+
+- non stai creando automaticamente un nuovo thread
+- stai creando un task logico
+- il dispatcher decide su quale thread o thread pool quel task verra' eseguito
+
+Quindi due coroutine diverse possono:
+
+- girare sullo stesso thread in momenti diversi
+- girare su thread diversi dello stesso pool
+- partire su un thread e riprendere su un altro, se il dispatcher lo consente
+
+### Dispatcher piu' comuni
+
+#### `Dispatchers.Main`
+
+Serve per lavoro legato alla UI.
+
+In Android:
+
+- viene usato per aggiornare stato osservato dalla UI
+- e' il dispatcher naturale del `viewModelScope`
+
+Da usare per:
+
+- aggiornamenti UI
+- orchestrazione vicina alla schermata
+- raccolta di eventi che devono poi riflettersi sulla UI
+
+Da non usare per:
+
+- lavoro pesante CPU
+- operazioni lunghe di I/O
+
+#### `Dispatchers.IO`
+
+Serve per operazioni bloccanti o di input/output.
+
+Esempi:
+
+- file
+- database
+- rete
+
+Idea pratica:
+
+- se il lavoro potrebbe bloccare un thread per attesa I/O, spesso `IO` e' il dispatcher giusto
+
+#### `Dispatchers.Default`
+
+Serve per lavoro CPU-bound, cioe' calcolo.
+
+Esempi:
+
+- trasformazioni pesanti
+- parsing importante
+- algoritmi o elaborazioni che consumano CPU
+
+Idea pratica:
+
+- se il lavoro "calcola tanto" piu' che "attendere", spesso `Default` e' piu' adatto di `IO`
+
+#### Dispatcher di test
+
+Nei test usiamo dispatcher speciali di `kotlinx-coroutines-test`.
+
+Nel progetto:
+
+- [MainDispatcherRule.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/testutil/MainDispatcherRule.kt) sostituisce `Dispatchers.Main`
+- [CoroutineTimeControlTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineTimeControlTest.kt) mostra tempo virtuale e controllo deterministico
+
+Questo ci permette di:
+
+- evitare attese reali
+- controllare quando una coroutine avanza
+- rendere i test stabili e ripetibili
+
+### Esempio pratico nel codice
+
+Nel progetto c'e' anche un esempio reale di `withContext(Dispatchers.IO)` in:
+
+- [HomeRefreshAuditLogger.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_home/data/local/HomeRefreshAuditLogger.kt)
+
+Li' facciamo una vera scrittura su file interno dell'app dopo il refresh Home.
+
+Perche' e' corretto:
+
+- scrivere su file e' I/O bloccante
+- non vogliamo farlo sul main thread
+- `Dispatchers.IO` e' pensato proprio per questo tipo di lavoro
+
+Nota importante:
+
+- non abbiamo aggiunto `withContext(IO)` attorno a Retrofit solo "perche' e' rete"
+- come esempio didattico sarebbe stato meno pulito
+- qui invece mostriamo un caso in cui il cambio di dispatcher e' chiaramente giustificato
+
+### Perche' e' importante per evitare bug
+
+Se scegli male il dispatcher:
+
+- puoi bloccare il main thread
+- puoi fare lavoro pesante nel posto sbagliato
+- puoi ottenere prestazioni peggiori o UI scattosa
+
+Se capisci il rapporto tra coroutine, dispatcher e thread pool:
+
+- eviti di confondere "coroutine" con "thread"
+- sai dove vive davvero il lavoro
+- sai quando cambiare contesto e quando no
+
+### Regola pratica veloce
+
+- `Main` per lavoro vicino alla UI
+- `IO` per operazioni che attendono risorse esterne
+- `Default` per lavoro di calcolo
+- dispatcher di test per controllare coroutine nei test
+
+### Parole chiave essenziali
+
+#### `suspend`
+
+Una funzione `suspend` e' una funzione che puo' sospendersi senza bloccare il thread.
+
+Nel progetto:
+
+- i use case che fanno lavoro asincrono, come refresh o scrittura dati, usano `suspend`
+
+Idea mentale:
+
+- "questa operazione puo' richiedere tempo, ma non voglio bloccare il thread"
+
+#### `launch`
+
+`launch` avvia una coroutine che esegue lavoro in background logico e non restituisce un valore diretto.
+
+In altre parole:
+
+- serve quando vuoi "far partire un lavoro"
+- non ti aspetti un risultato immediato come valore di ritorno
+- ottieni un `Job`, utile per lifecycle, cancellazione o sincronizzazione, ma non un valore come con `async`
+
+Nel progetto:
+
+- i `ViewModel` usano `viewModelScope.launch { ... }` per reagire agli eventi UI
+
+Perche' ha senso:
+
+- il `ViewModel` puo' avviare lavoro asincrono e poi aggiornare `StateFlow`
+- la coroutine viene legata al lifecycle del `ViewModel`
+
+### `launch` e "fire and forget"
+
+Molto spesso `launch` viene descritto come pattern "fire and forget".
+
+Questo significa:
+
+- fai partire un lavoro
+- non aspetti un valore di ritorno diretto
+- lasci che la coroutine completi il suo compito nel contesto in cui e' stata lanciata
+
+Esempi tipici:
+
+- salvare dati
+- reagire a un click
+- fare refresh di una schermata
+- aggiornare stato UI dopo un'operazione asincrona
+
+Ma "fire and forget" non significa "senza controllo".
+
+Nel progetto, per esempio, non usiamo `GlobalScope.launch { ... }`:
+
+- usiamo `viewModelScope.launch { ... }`
+- quindi il lavoro parte, ma resta legato al lifecycle del `ViewModel`
+- se il `ViewModel` viene distrutto, la coroutine viene cancellata
+
+Questa e' la versione sana del "fire and forget" in Android:
+
+- il caller non aspetta un valore
+- ma la coroutine vive dentro una scope controllata
+
+### Quando usare `launch`
+
+Usa `launch` quando:
+
+- devi avviare un effetto collaterale asincrono
+- vuoi aggiornare stato osservabile, non restituire un valore
+- stai reagendo a un evento UI
+- hai gia' una scope chiara, come `viewModelScope`
+
+### Quando NON e' la scelta migliore
+
+`launch` non e' ideale quando:
+
+- ti serve un valore di ritorno diretto
+- vuoi comporre un risultato con altre coroutine
+- vuoi esprimere chiaramente "questa operazione produce un output"
+
+In quei casi spesso ha piu' senso:
+
+- una funzione `suspend`
+- oppure `async` / `await`, se ti serve davvero un risultato asincrono
+
+### Regola pratica veloce
+
+- `launch` = "avvia un lavoro"
+- `suspend` = "definisci un'operazione sospendibile"
+- `async` = "avvia un lavoro che produce un risultato"
+
+### Nota di sicurezza
+
+Usare `launch` nel posto sbagliato puo' creare problemi:
+
+- coroutine scollegate dal lifecycle
+- errori piu' difficili da tracciare
+- lavoro che continua anche quando la schermata non esiste piu'
+
+Per questo in Android e' meglio evitare `GlobalScope.launch` nei casi normali e preferire scope legate al lifecycle, come `viewModelScope`.
+
+#### `delay`
+
+`delay(...)` sospende una coroutine per un certo tempo senza bloccare il thread.
+
+Non e' come `Thread.sleep(...)`:
+
+- `delay` sospende in modo cooperativo
+- `Thread.sleep` blocca davvero il thread
+
+Nel progetto:
+
+- c'e' un test dedicato in [CoroutineTimeControlTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineTimeControlTest.kt) che mostra come testare `delay` senza aspettare tempo reale
+
+### `Flow` e `StateFlow`
+
+Le coroutine in questo progetto non servono solo per "fare cose in background", ma anche per modellare dati che cambiano nel tempo.
+
+#### `Flow`
+
+`Flow` rappresenta un flusso di valori emessi nel tempo.
+
+Nel progetto:
+
+- repository e use case espongono `Flow`
+- i `ViewModel` osservano quel flusso e lo trasformano in stato UI
+
+Idea mentale:
+
+- "non ti do un solo valore, ti do una sequenza di aggiornamenti"
+
+#### `StateFlow`
+
+`StateFlow` e' un tipo di `Flow` che rappresenta uno stato corrente sempre disponibile.
+
+Nel progetto:
+
+- i `ViewModel` espongono `StateFlow<UiState>`
+- Compose osserva quello stato e ridisegna la UI quando cambia
+
+Perche' e' utile:
+
+- la UI legge sempre l'ultimo stato valido
+- il flusso dati resta prevedibile e unidirezionale
+
+### Come si collegano a MVVM qui
+
+Nel progetto il flusso tipico e':
+
+- la UI invia un evento
+- il `ViewModel` lancia una coroutine con `viewModelScope.launch`
+- il `ViewModel` chiama un use case `suspend` o osserva un `Flow`
+- il repository restituisce dati o aggiorna una sorgente dati
+- il `ViewModel` aggiorna `StateFlow`
+- la UI osserva lo stato e si aggiorna
+
+Questa combinazione rende il codice:
+
+- piu' leggibile
+- meno accoppiato
+- piu' facile da testare
+
+### Perche' `runTest` e' importante nei test
+
+Nei test usiamo `runTest` per eseguire coroutine in un ambiente controllato.
+
+Questo permette di:
+
+- testare funzioni `suspend`
+- controllare coroutine del `ViewModel`
+- saltare `delay` senza aspettare tempo reale
+- usare `advanceTimeBy(...)` e `advanceUntilIdle()`
+
+Nel progetto:
+
+- [CoroutineTimeControlTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineTimeControlTest.kt) mostra il controllo del tempo virtuale
+- [MainDispatcherRule.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/testutil/MainDispatcherRule.kt) sostituisce `Dispatchers.Main` nei test dei `ViewModel`
+- [InMemoryTodoDataSource.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/feature_todo/data/local/InMemoryTodoDataSource.kt) contiene anche un esempio reale di `suspend fun fetchTodoLists()` con `delay(...)`
+- [InMemoryTodoDataSourceTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_todo/data/local/InMemoryTodoDataSourceTest.kt) mostra come testarlo senza aspettare un secondo reale
+
+### Regola pratica veloce
+
+- usa coroutine per lavoro asincrono leggibile e non bloccante
+- usa `suspend` per operazioni che possono richiedere tempo
+- usa `Flow` per dati che cambiano nel tempo
+- usa `StateFlow` per lo stato corrente della UI
+- usa `runTest` nei test per controllare coroutine e tempo virtuale
+
+## Hilt Scope Guide
+
+Nel progetto al momento usiamo soprattutto `@Singleton`, ma e' utile capire bene la differenza con `@ActivityScoped` e `@ViewModelScoped`.
+
+### `@Singleton`
+
+Significato:
+
+- esiste una sola istanza per tutto il ciclo di vita dell'app process
+- vive nel `SingletonComponent`
+- tutti i consumer che chiedono quella dipendenza ricevono la stessa istanza finche' il processo resta vivo
+
+Quando usarlo:
+
+- client condivisi come `Retrofit`, `OkHttpClient`, interceptor, repository condivisi
+- cache applicative o oggetti stateless che non devono essere ricreati spesso
+- dipendenze che servono in piu' schermate o in piu' feature
+
+Quando NON usarlo:
+
+- per oggetti che dipendono strettamente da una singola schermata o da un singolo `ViewModel`
+- per stato UI temporaneo
+- per oggetti che vuoi ricreare a ogni `Activity` o a ogni `ViewModel`
+
+Nel progetto:
+
+- `OkHttpClient`, `Retrofit`, `HomeApiService`, `HomeRepositoryImpl`, `HomeLocalDataSource`, `HomeRemoteDataSource` e `TeachingMockInterceptor` sono pensati come dipendenze condivise, quindi `@Singleton` ha senso
+
+### `@ActivityScoped`
+
+Significato:
+
+- esiste una sola istanza per una specifica `Activity`
+- vive nel `ActivityComponent`
+- se l'`Activity` viene distrutta e ricreata, anche la dipendenza viene distrutta e ricreata
+
+Quando usarlo:
+
+- oggetti legati a una singola `Activity`
+- coordinatori UI, navigator, controller o helper che hanno senso solo dentro quella schermata Android
+- dipendenze che devono essere condivise tra fragment o composable ospitati dalla stessa `Activity`, ma non dal resto dell'app
+
+Quando NON usarlo:
+
+- per oggetti che vuoi riusare in tutta l'app: in quel caso meglio `@Singleton`
+- per oggetti che devono vivere quanto il `ViewModel`
+- se vuoi sopravvivere alle configuration change: `@ActivityScoped` non e' la scope giusta, per quel caso in Hilt di solito si valuta `@ActivityRetainedScoped`
+
+Esempio mentale:
+
+- "serve solo finche' questa Activity esiste" -> `@ActivityScoped`
+
+### `@ViewModelScoped`
+
+Significato:
+
+- esiste una sola istanza per uno specifico `ViewModel`
+- vive nel `ViewModelComponent`
+- tutte le dipendenze iniettate dentro quel `ViewModel` condividono la stessa istanza scoped, ma un altro `ViewModel` ricevera' una istanza diversa
+
+Quando usarlo:
+
+- oggetti di supporto al `ViewModel`
+- mapper stateful, use case stateful, sessioni temporanee o orchestratori che devono vivere esattamente quanto il `ViewModel`
+- dipendenze che devono essere condivise tra piu' use case o helper dello stesso `ViewModel`, ma non fuori da li'
+
+Quando NON usarlo:
+
+- per client globali di rete o repository condivisi
+- per oggetti che devono essere condivisi tra piu' `ViewModel`
+- per oggetti che devono vivere solo dentro una singola `Activity` ma non dentro il `ViewModel`
+
+Esempio mentale:
+
+- "serve solo a questo ViewModel e deve morire con lui" -> `@ViewModelScoped`
+
+### Regola pratica veloce
+
+- usa `@Singleton` per infrastruttura condivisa e dipendenze app-wide
+- usa `@ActivityScoped` per oggetti legati alla vita di una specifica `Activity`
+- usa `@ViewModelScoped` per oggetti che appartengono a un singolo `ViewModel`
+
+### Regola ancora piu' importante
+
+La scope deve sempre riflettere il ciclo di vita reale dell'oggetto, non solo il punto in cui viene iniettato.
+
+Se scegli una scope troppo larga:
+
+- l'oggetto vive piu' del necessario
+- rischi stato condiviso indesiderato
+- aumenti accoppiamento e bug difficili da capire
+
+Se scegli una scope troppo stretta:
+
+- l'oggetto viene ricreato troppo spesso
+- perdi cache o stato utile
+- il comportamento puo' diventare incoerente tra schermate e rotazioni
+
+## Hilt Qualifier Guide
+
+I qualifier servono a dire a Hilt quale dipendenza vogliamo quando il solo tipo
+non basta piu' a distinguerla.
+
+### Built-in qualifiers usati qui
+
+#### `@ActivityContext`
+
+Significato:
+
+- chiede a Hilt il `Context` della Activity corrente
+- e' utile per dipendenze che devono vivere quanto la Activity
+
+Quando usarlo:
+
+- helper, coordinator o oggetti `@ActivityScoped`
+- casi in cui serve davvero il contesto della schermata corrente
+
+Quando NON usarlo:
+
+- in un `@Singleton`
+- in oggetti che devono sopravvivere alla Activity
+
+Nel progetto:
+
+- [ActivitySessionTracker.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/activity/ActivitySessionTracker.kt) usa `@ActivityContext` e per questo non deve diventare `@Singleton`
+
+#### `@ApplicationContext`
+
+Significato:
+
+- chiede a Hilt il `Context` dell'applicazione
+- e' il context sicuro da usare in componenti app-wide
+
+Quando usarlo:
+
+- servizi applicativi, provider, helper globali, risorse condivise
+- oggetti `@Singleton` che hanno bisogno di un `Context`
+
+Quando NON usarlo:
+
+- se hai davvero bisogno del lifecycle o del comportamento di una singola Activity
+
+Nel progetto:
+
+- [AppIdentityProvider.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/app/AppIdentityProvider.kt) usa `@ApplicationContext`, quindi puo' stare tranquillamente in `@Singleton` senza leak di UI
+
+### Custom qualifiers usati qui
+
+#### Perche' esistono
+
+Se nel grafo hai piu' dipendenze dello stesso tipo, per esempio:
+
+- piu' `String`
+- piu' `OkHttpClient`
+- piu' `Retrofit`
+
+Hilt non puo' indovinare quale vuoi. Un qualifier custom elimina l'ambiguita'.
+
+#### `@AppPackageName`
+
+Serve a distinguere una `String` che rappresenta il package name dell'app da altre `String` possibili.
+
+Nel progetto:
+
+- e' dichiarato in [AppQualifiers.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/di/AppQualifiers.kt)
+- viene fornito da [AppModule.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/di/AppModule.kt)
+- viene consumato da [AppIdentityProvider.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/app/AppIdentityProvider.kt)
+
+#### `@TeachingBaseUrl` e `@TeachingHttpClient`
+
+Servono a distinguere:
+
+- la base URL didattica dell'esempio
+- l'`OkHttpClient` usato per il flusso di rete della feature Home
+
+Nel progetto:
+
+- sono dichiarati in [NetworkQualifiers.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/di/NetworkQualifiers.kt)
+- vengono usati in [NetworkModule.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/main/java/com/example/taskflow2/core/di/NetworkModule.kt)
+
+### Regola pratica veloce
+
+- usa i built-in qualifier di Hilt quando ti serve distinguere il tipo di `Context`
+- usa qualifier custom quando hai piu' dipendenze dello stesso tipo ma con significati diversi
+- se inizi ad avere piu' `String`, `Retrofit` o `OkHttpClient`, aggiungi qualifier prima che il grafo diventi ambiguo
+
+### Nota anti-leak
+
+Un qualifier non gestisce il lifecycle: quello e' compito della scope.
+
+Quindi:
+
+- qualifier = "quale dipendenza voglio?"
+- scope = "per quanto tempo deve vivere?"
+
+Per evitare leak, servono entrambe le scelte giuste:
+
+- usa `@ActivityContext` solo con dipendenze legate alla Activity
+- usa `@ApplicationContext` per singleton che richiedono un context
+- non mettere in `@Singleton` oggetti che trattengono Activity, View o `ActivityContext`
+
+## MVVM + DI Perche Funzionano Bene Insieme
+
+MVVM e dependency injection si rafforzano a vicenda.
+
+### Vantaggi principali
+
+- il `ViewModel` resta focalizzato su stato UI ed eventi, invece di creare da solo repository, data source o client di rete
+- la business logic puo' vivere in use case e repository, quindi si testa senza passare dalla UI
+- le dipendenze concrete si possono sostituire con fake o stub nei test
+- il wiring resta fuori dalla schermata e fuori dal `ViewModel`, quindi il codice e' piu' leggibile e meno accoppiato
+- cambiare implementazione tecnica diventa piu' semplice: il `ViewModel` continua a parlare con astrazioni o collaboratori gia' pronti
+
+### Cosa dimostra questo progetto
+
+Nel progetto i test mostrano proprio questi vantaggi:
+
+- [AddTodoUseCaseTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_todo/domain/usecase/AddTodoUseCaseTest.kt)
+  dimostra che la regola "non aggiungere titoli vuoti" vive nel use case e si testa con un repository fake
+- [TodoViewModelTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_todo/presentation/TodoViewModelTest.kt)
+  dimostra che il `ViewModel` aggiorna `UiState` e reagisce agli eventi senza UI reale, grazie a use case e repository iniettati
+- [HomeViewModelTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/feature_home/presentation/HomeViewModelTest.kt)
+  dimostra che anche un `@HiltViewModel` resta facile da testare per semplice constructor injection, usando collaboratori fake al posto del wiring reale
+- [CoroutineTimeControlTest.kt](/Users/matteoperotta/AndroidStudioProjects/TaskFlow2/app/src/test/java/com/example/taskflow2/coroutines/CoroutineTimeControlTest.kt)
+  dimostra come `runTest`, `advanceTimeBy` e `advanceUntilIdle` permettano di testare coroutine e `delay` senza aspettare tempo reale
+
+### Regola pratica
+
+Se un `ViewModel` e' difficile da testare, spesso significa una di queste cose:
+
+- sta creando da solo le dipendenze
+- contiene troppa business logic
+- dipende da dettagli Android o da oggetti concreti invece che da collaboratori sostituibili
+
+In quel caso MVVM + DI non sono ancora applicati fino in fondo.
 
 ## Stato attuale del progetto
 
@@ -309,6 +1015,7 @@ Quando l'utente fa toggle su un item:
 - `Todo`: entita' del dominio
 - `TodoRepository`: contratto astratto del dominio
 - `GetTodosUseCase`: espone il flusso della lista TODO
+- `FetchTodoListsUseCase`: espone uno snapshot one-shot della lista TODO
 - `AddTodoUseCase`: contiene la regola "non aggiungere titoli vuoti"
 - `ToggleTodoUseCase`: contiene la logica di inversione del completamento
 
@@ -338,6 +1045,7 @@ Quando l'utente fa toggle su un item:
 - `app/src/main/java/com/example/taskflow2/feature_todo/domain/model/Todo.kt`
 - `app/src/main/java/com/example/taskflow2/feature_todo/domain/repository/TodoRepository.kt`
 - `app/src/main/java/com/example/taskflow2/feature_todo/domain/usecase/GetTodosUseCase.kt`
+- `app/src/main/java/com/example/taskflow2/feature_todo/domain/usecase/FetchTodoListsUseCase.kt`
 - `app/src/main/java/com/example/taskflow2/feature_todo/domain/usecase/AddTodoUseCase.kt`
 - `app/src/main/java/com/example/taskflow2/feature_todo/domain/usecase/ToggleTodoUseCase.kt`
 - `app/src/main/java/com/example/taskflow2/feature_todo/data/local/InMemoryTodoDataSource.kt`
@@ -637,6 +1345,7 @@ Possibili evoluzioni consigliate:
 - `TodoContract.kt`: contratto UI della feature TODO
 - `TodoViewModel.kt`: stato e orchestrazione della schermata TODO
 - `TodoScreen.kt`: UI Compose della feature TODO
+- `FetchTodoListsUseCase.kt`: esempio di fetch `suspend` one-shot alternativo al `Flow`
 - `AddTodoUseCase.kt`: regola di validazione del titolo
 - `ToggleTodoUseCase.kt`: logica di toggle
 - `TodoRepository.kt`: contratto del dominio

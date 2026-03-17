@@ -31,7 +31,8 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val observeHomeInfoUseCase: ObserveHomeInfoUseCase,
-    private val refreshHomeInfoUseCase: RefreshHomeInfoUseCase
+    private val refreshHomeInfoUseCase: RefreshHomeInfoUseCase,
+    private val refreshSession: HomeRefreshSession
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -68,6 +69,12 @@ class HomeViewModel @Inject constructor(
             _uiState.update { currentState ->
                 currentState.copy(isRefreshing = true)
             }
+
+            // `HomeRefreshSession` e' `@ViewModelScoped`:
+            // il suo stato appartiene a questo ViewModel e non deve essere
+            // condiviso globalmente. Usare `@Singleton` qui porterebbe a uno
+            // state leak tra schermate o istanze diverse del ViewModel.
+            refreshSession.markRefreshStarted()
 
             try {
                 refreshHomeInfoUseCase()

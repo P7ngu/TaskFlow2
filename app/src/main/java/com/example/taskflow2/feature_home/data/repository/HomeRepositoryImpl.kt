@@ -2,6 +2,7 @@ package com.example.taskflow2.feature_home.data.repository
 
 import com.example.taskflow2.feature_home.data.local.HomeLocalDataSource
 import com.example.taskflow2.feature_home.data.local.HomeLocalModel
+import com.example.taskflow2.feature_home.data.local.HomeRefreshAuditLogger
 import com.example.taskflow2.feature_home.data.remote.HomeRemoteDataSource
 import com.example.taskflow2.feature_home.domain.model.HomeInfo
 import com.example.taskflow2.feature_home.domain.repository.HomeRepository
@@ -26,10 +27,14 @@ import javax.inject.Singleton
  * - `HomeRemoteDataSource` per il recupero remoto.
  * - `HomeInfo` come modello di dominio restituito ai use case.
  */
+// `@Singleton` evita di ricreare wiring e cache inutilmente.
+// Il repository non conserva riferimenti UI, quindi non introduce leak di
+// Activity o ViewModel.
 @Singleton
 class HomeRepositoryImpl @Inject constructor(
     private val localDataSource: HomeLocalDataSource,
-    private val remoteDataSource: HomeRemoteDataSource
+    private val remoteDataSource: HomeRemoteDataSource,
+    private val homeRefreshAuditLogger: HomeRefreshAuditLogger
 ) : HomeRepository {
 
     override fun observeHomeInfo(): Flow<HomeInfo?> {
@@ -50,6 +55,13 @@ class HomeRepositoryImpl @Inject constructor(
                 serverStatus = remoteModel.serverStatus,
                 lastSyncLabel = remoteModel.fetchedAt
             )
+        )
+
+        // Esempio pratico:
+        // la scrittura su file e' I/O bloccante, quindi il logger usa
+        // `withContext(Dispatchers.IO)` invece di girare sul main thread.
+        homeRefreshAuditLogger.logRefresh(
+            entry = "home-refresh:${remoteModel.fetchedAt}"
         )
     }
 }

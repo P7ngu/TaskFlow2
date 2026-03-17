@@ -1,6 +1,7 @@
 package com.example.taskflow2.feature_todo.data.local
 
 import com.example.taskflow2.feature_todo.domain.model.Todo
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +36,25 @@ class InMemoryTodoDataSource {
     private var nextId = 3L
 
     fun observeTodos(): Flow<List<Todo>> = todos.asStateFlow()
+
+    /**
+     * Esempio didattico di fetch one-shot con coroutine.
+     *
+     * A differenza di `observeTodos()`, che espone un flusso continuo (`Flow`),
+     * questa funzione restituisce uno snapshot singolo della lista TODO.
+     *
+     * Il `delay(...)` serve solo a simulare una sorgente lenta, per esempio:
+     * - rete
+     * - database
+     * - file system
+     *
+     * Nei test possiamo sostituire l'attesa reale con `runTest`,
+     * `advanceTimeBy(...)` e `advanceUntilIdle()`.
+     */
+    suspend fun fetchTodoLists(): List<Todo> {
+        delay(1_000)
+        return todos.value
+    }
 
     suspend fun insertTodo(title: String) {
         val newTodo = Todo(

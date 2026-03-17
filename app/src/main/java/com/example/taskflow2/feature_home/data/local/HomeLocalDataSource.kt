@@ -20,6 +20,9 @@ import javax.inject.Singleton
  * - `HomeRepositoryImpl` che lo usa come cache.
  * - `HomeLocalModel` come struttura dati locale.
  */
+// `@Singleton` qui ha senso perche' questa cache tecnica e' condivisa dalla
+// feature lungo la vita del processo app e non dipende da Activity, View o
+// altri riferimenti UI che potrebbero causare leak.
 @Singleton
 class HomeLocalDataSource @Inject constructor() {
 

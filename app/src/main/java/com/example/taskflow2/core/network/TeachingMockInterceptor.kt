@@ -17,6 +17,9 @@ import okhttp3.ResponseBody.Companion.toResponseBody
  * un JSON finto ma realistico. In questo modo il data source continua a usare
  * `HomeApiService` come in un'app vera.
  */
+// Anche qui `@Singleton` e' appropriato: e' un componente di rete condiviso,
+// senza riferimenti a UI o contesto di schermata, quindi non rischia leak
+// legati al ciclo di vita delle Activity.
 @Singleton
 class TeachingMockInterceptor @Inject constructor() : Interceptor {
 

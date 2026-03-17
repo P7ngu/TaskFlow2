@@ -19,6 +19,8 @@ import javax.inject.Singleton
  * - `HomeRepositoryImpl` che lo interroga durante il refresh.
  * - `HomeRemoteModel` come risposta tecnica del layer data.
  */
+// `@Singleton` va bene perche' il data source remoto e' infrastruttura
+// condivisa e stateless: non appartiene a una Activity o a un ViewModel.
 @Singleton
 class HomeRemoteDataSource @Inject constructor(
     private val homeApiService: HomeApiService

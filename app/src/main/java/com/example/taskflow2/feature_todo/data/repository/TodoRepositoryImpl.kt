@@ -28,6 +28,8 @@ class TodoRepositoryImpl(
     // Importante: non decide le regole del dominio.
     override fun getTodos(): Flow<List<Todo>> = localDataSource.observeTodos()
 
+    override suspend fun fetchTodoLists(): List<Todo> = localDataSource.fetchTodoLists()
+
     override suspend fun addTodo(title: String) {
         localDataSource.insertTodo(title)
     }

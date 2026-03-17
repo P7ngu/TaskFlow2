@@ -150,6 +150,7 @@ File chiave:
 - [`HomeScreen.kt`](../app/src/main/java/com/example/taskflow2/feature_home/ui/HomeScreen.kt)
 - [`ExampleScreen.kt`](../app/src/main/java/com/example/taskflow2/feature_example/ui/ExampleScreen.kt)
 - [`MainActivity.kt`](../app/src/main/java/com/example/taskflow2/MainActivity.kt)
+- [`AppNavigation.kt`](../app/src/main/java/com/example/taskflow2/navigation/AppNavigation.kt)
 
 ## Samples e Codice App
 
@@ -202,7 +203,8 @@ Vantaggi:
 - [`MainActivity.kt`](../app/src/main/java/com/example/taskflow2/MainActivity.kt)
 - [`TaskFlowApplication.kt`](../app/src/main/java/com/example/taskflow2/TaskFlowApplication.kt)
 
-`MainActivity` fa da composition root Android. Non contiene business logic: collega ViewModel e schermate.  
+`MainActivity` fa da composition root Android. Non contiene business logic: avvia tema e graph.  
+`AppNavigation` ospita il `NavHost`, la sealed class `Screen` e il wiring delle destinazioni.  
 `TaskFlowApplication` inizializza Hilt a livello application.
 
 ## Scelte Didattiche Intenzionali

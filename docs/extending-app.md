@@ -14,6 +14,7 @@ Nel progetto trovi gia' un flusso minimale:
 File di riferimento:
 
 - [`MainActivity.kt`](../app/src/main/java/com/example/taskflow2/MainActivity.kt)
+- [`AppNavigation.kt`](../app/src/main/java/com/example/taskflow2/navigation/AppNavigation.kt)
 - [`HomeScreen.kt`](../app/src/main/java/com/example/taskflow2/feature_home/ui/HomeScreen.kt)
 - [`ExampleScreen.kt`](../app/src/main/java/com/example/taskflow2/feature_example/ui/ExampleScreen.kt)
 
@@ -22,23 +23,24 @@ File di riferimento:
 Con la struttura attuale il flusso consigliato e' questo:
 
 1. crea la schermata Compose nella feature, per esempio `feature_profilo/ui/ProfiloScreen.kt`
-2. aggiungi una nuova route nello stesso file di [`MainActivity.kt`](../app/src/main/java/com/example/taskflow2/MainActivity.kt)
+2. aggiungi una nuova entry nella sealed class `Screen` in [`AppNavigation.kt`](../app/src/main/java/com/example/taskflow2/navigation/AppNavigation.kt)
 3. registra la route nel `NavHost`
 4. aggiungi una callback semplice alla schermata che deve aprirla, per esempio `onOpenProfile`
-5. in `MainActivity` collega quella callback a `navController.navigate(...)`
+5. in `AppNavigation` collega quella callback a `navController.navigate(...)`
 
 L'idea chiave e' questa:
 
 - la schermata nuova vive nella sua feature
 - la home espone solo callback semplici come `onOpenProfile`
-- `MainActivity` decide quale route aprire
+- `AppNavigation` decide quale route aprire
 - il back di sistema torna indietro da solo grazie a Navigation Compose
 
 ## Dove Mettere Cosa
 
 Per non confondersi, usa questa regola pratica:
 
-- [`MainActivity.kt`](../app/src/main/java/com/example/taskflow2/MainActivity.kt): contiene `NavHost`, route e collegamenti di navigazione
+- [`MainActivity.kt`](../app/src/main/java/com/example/taskflow2/MainActivity.kt): avvia tema e graph
+- [`AppNavigation.kt`](../app/src/main/java/com/example/taskflow2/navigation/AppNavigation.kt): contiene `NavHost`, sealed class `Screen` e collegamenti di navigazione
 - `feature_x/ui/Screen.kt`: contiene solo UI Compose e callback semplici
 - `feature_x/presentation/`: aggiungilo solo quando la schermata ha davvero stato o logica
 
@@ -108,13 +110,15 @@ Importante:
 - se la schermata e' semplice, evita di creare subito `ViewModel`, `Contract`, `UseCase` o `Repository`
 - inizia dalla UI minima e fai crescere la feature solo quando serve
 
-### 2. Aggiungi la route in `MainActivity`
+### 2. Aggiungi la schermata nella sealed class `Screen`
 
-Esempio di nuova route:
+Esempio di nuova entry:
 
 ```kotlin
-private object TaskFlowRoute {
-    const val Profile = "profile"
+sealed class Screen(val route: String) {
+    data object Home : Screen("home")
+    data object Example : Screen("example")
+    data object Profile : Screen("profile")
 }
 ```
 
@@ -124,26 +128,14 @@ Regola pratica:
 - evita spazi o testi UI come route
 - tieni tutte le route nello stesso punto del file
 
-Esempio buono:
-
-```kotlin
-const val Profile = "profile"
-```
-
-Esempio da evitare:
-
-```kotlin
-const val Profile = "Apri Profilo"
-```
-
-Perche' la route e' un identificatore tecnico, non una stringa mostrata all'utente.
+La route resta un identificatore tecnico, non una stringa mostrata all'utente.
 
 ### 3. Registra la schermata dentro `NavHost`
 
 Esempio di registrazione nel `NavHost`:
 
 ```kotlin
-composable(route = TaskFlowRoute.Profile) {
+composable(route = Screen.Profile.route) {
     ProfileScreen(
         onBack = navController::navigateUp
     )
@@ -197,12 +189,12 @@ HomeScreen(
     uiState = homeUiState,
     onEvent = homeViewModel::onEvent,
     onOpenProfile = {
-        navController.navigate(TaskFlowRoute.Profile) {
+        navController.navigate(Screen.Profile.route) {
             launchSingleTop = true
         }
     },
     onOpenExample = {
-        navController.navigate(TaskFlowRoute.Example) {
+        navController.navigate(Screen.Example.route) {
             launchSingleTop = true
         }
     }
@@ -213,7 +205,7 @@ Questo passaggio e' importante per tenere pulita la UI:
 
 - `HomeScreen` non conosce `NavController`
 - `HomeScreen` non conosce la route `"profile"`
-- la decisione di navigazione resta tutta in `MainActivity`
+- la decisione di navigazione resta tutta in `AppNavigation`
 
 Questa e' una delle best practice piu' utili da ricordare:
 
@@ -238,12 +230,253 @@ Quando hai finito, controlla questo:
 - tieni le route centralizzate in un solo punto
 - evita stringhe hardcoded sparse nelle UI
 - passa callback di navigazione alle schermate invece del `NavController`
-- per esempi piccoli preferisci tenere route e `NavHost` nello stesso file, qui `MainActivity`
+- se usi una sealed class `Screen`, tieni sealed class e `NavHost` vicini nello stesso file di navigation
 - per esempi piccoli preferisci callback dirette e leggibili invece di helper non necessari
 - crea i ViewModel nella destinazione che li usa, non troppo in alto senza motivo
 - usa `collectAsStateWithLifecycle()` per osservare stato UI in modo sicuro rispetto al lifecycle
 - usa `launchSingleTop` per evitare duplicati della stessa pagina
 - usa `navigateUp()` o il back di sistema per tornare alla schermata precedente
+
+## ViewModel: Best Practice
+
+Nel progetto attuale i ViewModel vengono creati dentro la destinazione che li usa, per esempio nel blocco:
+
+```kotlin
+composable(route = Screen.Home.route) {
+    val homeViewModel: HomeViewModel = hiltViewModel()
+    val todoViewModel: TodoViewModel = viewModel(factory = todoViewModelFactory)
+}
+```
+
+Questa e' una best practice perche':
+
+- il ViewModel resta vicino alla schermata che lo usa
+- il suo scope segue la navigation entry corretta
+- eviti di creare ViewModel non necessari quando una schermata non e' aperta
+- il flusso resta piu' leggibile per chi studia
+
+### Perche' non metterli tutti direttamente in `AppNavigation`
+
+Anche se la navigation vive in `AppNavigation`, in generale non conviene creare li' tutti i ViewModel dell'app in anticipo.
+
+Rischi principali:
+
+- allarghi inutilmente lo scope di ViewModel che servono a una sola schermata
+- rendi meno chiaro quale ViewModel appartiene a quale destinazione
+- il file di navigation rischia di diventare un contenitore troppo pesante
+- chi legge deve capire insieme routing, stato UI e creazione di tutte le feature
+
+Regola pratica:
+
+- crea il ViewModel dentro la `composable(...)` che lo usa
+- passa alla UI solo `uiState` e callback/eventi
+- evita di passare il ViewModel in giro piu' del necessario
+
+### `uiState` e `collectAsStateWithLifecycle()`
+
+Nel progetto vedi questo pattern:
+
+```kotlin
+val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+```
+
+Significa:
+
+- `homeViewModel.uiState` e' uno `StateFlow`
+- `collectAsStateWithLifecycle()` lo converte in uno `State<T>` leggibile da Compose
+- Compose si ricompone quando cambia il valore
+- la collection rispetta il lifecycle della schermata
+
+Questa e' la forma consigliata per leggere stato UI in Compose quando il ViewModel espone `StateFlow`.
+
+### Cosa significa `by`
+
+La parola chiave `by` qui usa la delegation di Kotlin.
+
+Senza delegation:
+
+```kotlin
+val homeUiStateState = homeViewModel.uiState.collectAsStateWithLifecycle()
+val homeUiState = homeUiStateState.value
+```
+
+Con delegation:
+
+```kotlin
+val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+```
+
+Il secondo modo e' piu' pulito da leggere perche':
+
+- evita il `.value` sparso
+- rende il codice UI piu' lineare
+- aiuta a distinguere meglio tra `State<T>` e valore UI corrente
+
+### Pattern Consigliato
+
+Per una schermata con ViewModel, il flusso consigliato e' questo:
+
+1. crea il ViewModel nella `composable(...)`
+2. raccogli `uiState` con `collectAsStateWithLifecycle()`
+3. passa `uiState` e callback alla schermata Compose
+4. lascia la UI focalizzata sul rendering
+
+Esempio:
+
+```kotlin
+val profileViewModel: ProfileViewModel = hiltViewModel()
+val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
+
+ProfileScreen(
+    uiState = profileUiState,
+    onBack = navController::navigateUp,
+    onEvent = profileViewModel::onEvent
+)
+```
+
+### Errori Comuni con i ViewModel
+
+- creare ViewModel troppo in alto solo "per comodita'"
+- condividere lo stesso ViewModel tra schermate senza un motivo reale
+- passare direttamente il ViewModel a molti composable profondi
+- leggere `StateFlow` senza `collectAsStateWithLifecycle()` nella UI Compose
+- mischiare responsabilita' di navigation e stato nello stesso punto senza bisogno
+
+### Quando usare `backStackEntry`
+
+Nel caso semplice del progetto attuale non serve.
+
+Di default puoi scrivere:
+
+```kotlin
+composable(route = Screen.Profile.route) {
+    val profileViewModel: ProfileViewModel = hiltViewModel()
+    val profileUiState by profileViewModel.uiState.collectAsStateWithLifecycle()
+
+    ProfileScreen(
+        uiState = profileUiState,
+        onBack = navController::navigateUp,
+        onEvent = profileViewModel::onEvent
+    )
+}
+```
+
+`backStackEntry` diventa utile soprattutto in questi casi:
+
+- devi leggere argomenti della route
+- vuoi ottenere un ViewModel legato a una entry specifica
+- vuoi condividere un ViewModel tra piu' schermate dello stesso graph
+
+Forma tipica:
+
+```kotlin
+composable(route = "profile/{id}") { backStackEntry ->
+    val id = backStackEntry.arguments?.getString("id")
+}
+```
+
+Oppure, in casi piu' avanzati, per uno scope condiviso:
+
+```kotlin
+val parentEntry = remember(backStackEntry) {
+    navController.getBackStackEntry("profile")
+}
+val profileViewModel: ProfileViewModel = hiltViewModel(parentEntry)
+```
+
+Regola pratica:
+
+- se non ti servono argomenti o scope condivisi, evita `backStackEntry`
+- usalo solo quando aggiunge valore reale
+- per chi studia, e' meglio partire senza e introdurlo dopo
+
+### Perche' non mettere la logica nel `NavHost`
+
+Il `NavHost` dovrebbe restare soprattutto un punto di wiring:
+
+- decide quale schermata mostrare
+- collega callback di navigazione
+- crea il ViewModel giusto per la destinazione
+
+Non dovrebbe diventare il posto in cui:
+
+- fai business logic
+- trasformi dati complessi
+- mantieni stato UI condiviso in modo improvvisato
+- coordini manualmente troppe feature tra loro
+
+Se il `NavHost` inizia a fare troppo, spesso il segnale e' che una parte della
+logica dovrebbe stare altrove, di solito nel ViewModel o nel repository.
+
+### Repository + `StateFlow` per stato condiviso
+
+Se hai bisogno di stato condiviso tra piu' schermate, spesso non serve
+spostare tutto nel `NavHost`.
+
+Una soluzione piu' pulita puo' essere:
+
+1. mettere lo stato condiviso in un repository
+2. esporlo come `Flow` o `StateFlow`
+3. farlo osservare dai ViewModel delle schermate che ne hanno bisogno
+
+Esempio concettuale:
+
+```kotlin
+class SessionRepository {
+    private val _session = MutableStateFlow<Session?>(null)
+    val session: StateFlow<Session?> = _session
+
+    fun updateSession(newSession: Session?) {
+        _session.value = newSession
+    }
+}
+```
+
+Poi nel ViewModel:
+
+```kotlin
+class ProfileViewModel(
+    sessionRepository: SessionRepository
+) : ViewModel() {
+    val uiState = sessionRepository.session
+}
+```
+
+Vantaggi:
+
+- la navigation non diventa un contenitore di stato
+- piu' schermate possono osservare la stessa fonte dati
+- lo stato vive in un punto piu' adatto alla logica applicativa
+- il flusso resta coerente con l'architettura a feature del progetto
+
+Regola pratica:
+
+- usa `backStackEntry` quando ti serve scope o argomenti di navigation
+- usa repository + `StateFlow` quando il problema e' stato condiviso o dati condivisi
+- non usare il `NavHost` come sostituto di repository o ViewModel
+
+## `Screen` come Sealed Class: Pro e Contro
+
+Potresti voler modellare le schermate con una sealed class o sealed interface, come fa ora il progetto in `AppNavigation.kt`.
+
+### Pro
+
+- centralizzi route e informazioni della schermata in un solo posto
+- riduci il rischio di typo sulle stringhe
+- l'elenco delle schermate disponibili e' piu' esplicito
+- puo' scalare meglio se aggiungi argomenti, label o metadati
+
+### Contro
+
+- per un esempio piccolo aggiunge piu' astrazione del necessario
+- chi studia deve seguire un livello in piu' rispetto a due costanti locali
+- se il progetto ha poche schermate il vantaggio pratico e' limitato
+- introdurla troppo presto puo' complicare una demo che vuole restare lineare
+
+Regola pratica per questo progetto:
+
+- la sealed class `Screen` va bene perche' le schermate iniziano a essere piu' di una e vogliamo centralizzarle
+- se il numero di schermate cresce molto, puo' scalare meglio delle stringhe sparse
 
 ## Quando Basta una Pagina UI
 
@@ -252,7 +485,7 @@ Se ti serve solo una pagina statica o un menu di navigazione:
 1. crea una cartella feature, per esempio `feature_profilo/ui/`
 2. aggiungi un file `ProfiloScreen.kt`
 3. definisci una `@Composable` che riceve callback semplici come `onBack`
-4. registra la nuova schermata nel `NavHost` in `MainActivity`
+4. registra la nuova schermata nel `NavHost` in `AppNavigation`
 5. aggiungi un pulsante nella schermata che deve aprirla
 
 Esempio minimale:
@@ -328,7 +561,7 @@ Segnale pratico che e' il momento di fare il salto:
 ## Procedura Consigliata
 
 1. Parti da una schermata semplice in `ui/`
-2. Collega la navigazione direttamente in `MainActivity`
+2. Collega la navigazione direttamente in `AppNavigation`
 3. Solo se serve, aggiungi `presentation/` con `UiState` e `UiEvent`
 4. Poi estrai `domain/` e `data/` quando la feature smette di essere statica
 5. Aggiungi almeno una preview o un test per la nuova logica
